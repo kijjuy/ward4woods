@@ -22,7 +22,10 @@ type ProductsStore struct {
 }
 
 func NewProductsStore(db *sql.DB, logger *slog.Logger) *ProductsStore {
-	return &ProductsStore{db: db, logger: logger}
+	return &ProductsStore{
+		db:     db,
+		logger: logger.With("Location", "ProductsStore"),
+	}
 }
 
 func (ps *ProductsStore) GetAllProducts() ([]models.Product, error) {
