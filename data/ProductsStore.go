@@ -48,16 +48,23 @@ func (ps *ProductsStore) GetAllProducts() ([]models.Product, error) {
 func (ps *ProductsStore) GetProductById(id int) (models.Product, error) {
 	row := ps.db.QueryRow("SELECT * FROM products WHERE product_id = $1", id)
 	product, err := scanProduct(row)
-
-	if err == sql.ErrNoRows {
-		ps.logger.Info("")
-	}
-
+	ps.logger.Info("Got product by id.")
 	return product, err
 }
 
 func (ps *ProductsStore) AddProduct(product models.Product) error {
-	panic("not implemented")
+	var id int
+	row := ps.db.QueryRow("INSERT INTO products VALUES(DEFAULT, $1, $2, $3, $4) RETURNING product_id",
+		product.Name, product.Price, product.Description, product.Category)
+
+	err := row.Scan(&id)
+
+	if err != nil {
+		ps.logger.Error("Could not create product.", "Error", err)
+	}
+
+	ps.logger.Info("Product added to database.")
+	return nil
 }
 
 func (ps *ProductsStore) DeleteProductById(id int) error {
