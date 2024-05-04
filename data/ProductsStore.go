@@ -68,7 +68,14 @@ func (ps *ProductsStore) AddProduct(product models.Product) error {
 }
 
 func (ps *ProductsStore) DeleteProductById(id int) error {
-	panic("not implemented")
+	_, err := ps.db.Exec("DELETE FROM products WHERE product_id = $1", id)
+
+	if err != nil {
+		ps.logger.Error("Error when deleting product from database.", "Error", err)
+	}
+
+	ps.logger.Info("Product successfully deleted.")
+	return nil
 }
 
 func (ps *ProductsStore) UpdateProduct(product models.Product) error {
