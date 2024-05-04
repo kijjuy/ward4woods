@@ -53,17 +53,20 @@ func (ps *ProductsStore) GetProductById(id int) (models.Product, error) {
 }
 
 func (ps *ProductsStore) AddProduct(product models.Product) error {
-	var id int
-	row := ps.db.QueryRow("INSERT INTO products VALUES(DEFAULT, $1, $2, $3, $4) RETURNING product_id",
+	result, err := ps.db.Exec("INSERT INTO products VALUES(DEFAULT, $1, $2, $3, $4) RETURNING product_id",
 		product.Name, product.Price, product.Description, product.Category)
-
-	err := row.Scan(&id)
 
 	if err != nil {
 		ps.logger.Error("Could not create product.", "Error", err)
 	}
 
-	ps.logger.Info("Product added to database.")
+	id, err := result.LastInsertId()
+
+	if err != nil {
+		ps.logger.Error("Error getting id of new database product.", "Error", err)
+	}
+
+	ps.logger.Info("Product added to database.", "New product_id", id)
 	return nil
 }
 
