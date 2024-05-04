@@ -45,12 +45,23 @@ func main() {
 		switch r.Method {
 		case http.MethodGet:
 			productsHandler.GetAllProducts(w, r)
+			break
 		case http.MethodPost:
 			productsHandler.CreateProduct(w, r)
+			break
 		}
 	})
 
-	mux.HandleFunc("/api/products/{id}", productsHandler.GetProductById)
+	mux.HandleFunc("/api/products/{id}", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			productsHandler.GetProductById(w, r)
+			break
+		case http.MethodDelete:
+			productsHandler.DeleteProductById(w, r)
+			break
+		}
+	})
 
 	logger.Info(fmt.Sprintf("Application now lisening at: localhost%s", port))
 	err := http.ListenAndServe(port, mux)
