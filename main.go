@@ -90,5 +90,5 @@ func main() {
 	logger.Info(fmt.Sprintf("Application now lisening at: localhost%s", port))
 	err := http.ListenAndServe(port, mux)
 
-	logger.Error("Application crashed. Error:", err)
+	logger.Error("Application crashed.", "Error", err)
 }
