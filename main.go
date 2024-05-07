@@ -71,6 +71,7 @@ func setupStatic(mux *http.ServeMux, logger *slog.Logger) {
 	})
 
 	mux.HandleFunc("/", staticHandler.HandleRequests)
+	mux.HandleFunc("/products", staticHandler.HandleRequests)
 }
 
 func main() {
