@@ -1,0 +1,8 @@
+{{define "title"}}Products{{end}}
+{{define "body"}}
+<h1>Products</h1>
+
+<div class="container">
+	<div id="products-container" class="row" hx-get="/api/products" hx-target="this" hx-trigger="load"></div>
+    </div>
+{{end}}
