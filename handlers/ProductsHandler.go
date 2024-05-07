@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"ward4woods.ca/data"
+	"ward4woods.ca/helpers"
 	"ward4woods.ca/models"
 )
 
@@ -34,7 +35,7 @@ func (ph *ProductsHandler) GetAllProducts(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	json.NewEncoder(w).Encode(products)
+	helpers.RenderTemplate(w, "html/templates/productsList.html", products, ph.logger)
 }
 
 func (ph *ProductsHandler) GetProductById(w http.ResponseWriter, r *http.Request) {
