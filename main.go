@@ -55,6 +55,8 @@ func setupProduct(mux *http.ServeMux, db *sql.DB, logger *slog.Logger) {
 			break
 		}
 	})
+
+	mux.HandleFunc("products/{id}", productsHandler.ProductDetails)
 }
 
 func setupStatic(mux *http.ServeMux, logger *slog.Logger) {
@@ -71,7 +73,6 @@ func setupStatic(mux *http.ServeMux, logger *slog.Logger) {
 	})
 
 	mux.HandleFunc("/", staticHandler.HandleRequests)
-	mux.HandleFunc("/products", staticHandler.HandleRequests)
 }
 
 func main() {

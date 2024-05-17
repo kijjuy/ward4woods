@@ -110,3 +110,25 @@ func (ph *ProductsHandler) getIdFromRequest(w http.ResponseWriter, r *http.Reque
 
 	return id, err
 }
+
+func (ph *ProductsHandler) ProductsDetails(w http.ResponseWriter, r *http.Request) {
+	id, err := ph.getIdFromRequest(w, r)
+	if err != nil {
+		return
+	}
+
+	product, err := ph.productsStore.GetProductById(id)
+
+	if err == sql.ErrNoRows {
+		ph.logger.Warn("Attempted to find product by id, but product didn't exist.")
+		http.Error(w, "Product not found.", http.StatusNotFound)
+		return
+	}
+
+	if err != nil {
+		ph.logger.Warn("Error when finding product from database.")
+		http.Error(w, "Error finding product.", http.StatusInternalServerError)
+		return
+	}
+	helpers.RenderTemplate(w, "html/templates/productDetails", product, ph.logger)
+}
