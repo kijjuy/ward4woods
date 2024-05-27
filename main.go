@@ -29,8 +29,7 @@ func createProductsStore(db *sql.DB, logger *slog.Logger) *data.ProductsStore {
 	return data.NewProductsStore(db, logger)
 }
 
-func setupProduct(mux *http.ServeMux, db *sql.DB, logger *slog.Logger) {
-	productsStore := createProductsStore(db, logger)
+func setupProduct(mux *http.ServeMux, productsStore *data.ProductsStore, logger *slog.Logger) {
 
 	productsHandler := handlers.NewProductsHandler(productsStore, logger)
 
@@ -56,10 +55,9 @@ func setupProduct(mux *http.ServeMux, db *sql.DB, logger *slog.Logger) {
 		}
 	})
 
-	mux.HandleFunc("/products/{id}", productsHandler.ProductsDetails)
 }
 
-func setupStatic(mux *http.ServeMux, logger *slog.Logger) {
+func setupStatic(mux *http.ServeMux, productsStore *data.ProductsStore, logger *slog.Logger) {
 	htmlPath := "html"
 	templatePath := filepath.Join(htmlPath, "_layout.html")
 	errorPath := filepath.Join(htmlPath, "error.html")
@@ -72,6 +70,10 @@ func setupStatic(mux *http.ServeMux, logger *slog.Logger) {
 		http.ServeFile(w, r, faviconPath)
 	})
 
+	mux.HandleFunc("/products/{id}", func(w http.ResponseWriter, r *http.Request) {
+		staticHandler.ProductsDetails(w, r, productsStore)
+	})
+
 	mux.HandleFunc("/", staticHandler.HandleRequests)
 }
 
@@ -82,11 +84,13 @@ func main() {
 	conString := "postgres://postgres@172.17.0.2:5432?password=Password@1&sslmode=disable"
 	db := createDb(conString, logger)
 
+	productsStore := createProductsStore(db, logger)
+
 	mux := http.NewServeMux()
 
-	setupProduct(mux, db, logger)
+	setupProduct(mux, productsStore, logger)
 
-	setupStatic(mux, logger)
+	setupStatic(mux, productsStore, logger)
 
 	logger.Info(fmt.Sprintf("Application now lisening at: localhost%s", port))
 	err := http.ListenAndServe(port, mux)
