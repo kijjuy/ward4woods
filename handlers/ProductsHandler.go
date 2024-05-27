@@ -32,7 +32,7 @@ func (ph *ProductsHandler) GetAllProducts(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	helpers.RenderTemplate(w, "html/templates/productsList.html", products, ph.logger)
+	helpers.RenderTemplate(w, "html/templates/productsList.html", products)
 }
 
 func (ph *ProductsHandler) GetProductById(w http.ResponseWriter, r *http.Request) {

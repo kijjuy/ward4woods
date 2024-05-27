@@ -6,8 +6,8 @@ import (
 	"net/http"
 )
 
-func RenderTemplate(w http.ResponseWriter, templateName string, data interface{}, logger *slog.Logger) {
-	logger = logger.With("Location", "RenderTemplate")
+func RenderTemplate(w http.ResponseWriter, templateName string, data interface{}) {
+	logger := slog.With("Location", "RenderTemplate")
 	tmpl, err := template.ParseFiles(templateName)
 	if err != nil {
 		logger.Error("Could not load template files.", "Error", err)
