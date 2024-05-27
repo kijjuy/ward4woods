@@ -37,7 +37,7 @@ func setupProduct(mux *http.ServeMux, db *sql.DB, logger *slog.Logger) {
 	mux.HandleFunc("/api/products", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			productsHandler.GetAllProducts(w, r)
+			productsHandler.ProductsList(w, r)
 			break
 		case http.MethodPost:
 			productsHandler.CreateProduct(w, r)

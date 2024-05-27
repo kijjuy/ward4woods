@@ -132,3 +132,15 @@ func (ph *ProductsHandler) ProductsDetails(w http.ResponseWriter, r *http.Reques
 	}
 	helpers.RenderTemplate(w, "html/templates/productDetails", product, ph.logger)
 }
+
+func (ph *ProductsHandler) ProductsList(w http.ResponseWriter, r *http.Request) {
+	products, err := ph.productsStore.GetAllProducts()
+
+	if err != nil {
+		ph.logger.Error("Could not get products from store. Writing error response.")
+		http.Error(w, "Server error when trying to load products.", http.StatusInternalServerError)
+		return
+	}
+
+	helpers.RenderTemplate(w, "html/templates/productsList.html", products, ph.logger)
+}
