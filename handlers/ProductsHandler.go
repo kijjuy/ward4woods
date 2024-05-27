@@ -39,7 +39,7 @@ func (ph *ProductsHandler) GetAllProducts(w http.ResponseWriter, r *http.Request
 }
 
 func (ph *ProductsHandler) GetProductById(w http.ResponseWriter, r *http.Request) {
-	id, err := ph.getIdFromRequest(w, r)
+	id, err := ph.getIdFromApiRequest(w, r)
 	if err != nil {
 		return
 	}
@@ -83,7 +83,7 @@ func (ph *ProductsHandler) CreateProduct(w http.ResponseWriter, r *http.Request)
 }
 
 func (ph *ProductsHandler) DeleteProductById(w http.ResponseWriter, r *http.Request) {
-	id, err := ph.getIdFromRequest(w, r)
+	id, err := ph.getIdFromApiRequest(w, r)
 
 	if err != nil {
 		return
