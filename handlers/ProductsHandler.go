@@ -99,48 +99,19 @@ func (ph *ProductsHandler) DeleteProductById(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusOK)
 }
 
-func (ph *ProductsHandler) getIdFromRequest(w http.ResponseWriter, r *http.Request) (int, error) {
-	idStr := strings.TrimPrefix(r.URL.String(), "/api/products/")
+func (ph *ProductsHandler) getIdFromApiRequest(w http.ResponseWriter, r *http.Request) (int, error) {
+	prefix := "api/products"
+	return ph.getIdFromRequest(w, r, prefix)
+}
+
+func (ph *ProductsHandler) getIdFromRequest(w http.ResponseWriter, r *http.Request, prefix string) (int, error) {
+	idStr := strings.TrimPrefix(r.URL.String(), prefix)
 	id, err := strconv.Atoi(idStr)
 
 	if err != nil {
-		ph.logger.Warn("Could not get products by id: invalid id. Error: ", err)
+		ph.logger.Warn("Could not get products by id: invalid id.", "Error", err)
 		fmt.Fprintf(w, "Invalid product id.")
 	}
 
 	return id, err
-}
-
-func (ph *ProductsHandler) ProductsDetails(w http.ResponseWriter, r *http.Request) {
-	id, err := ph.getIdFromRequest(w, r)
-	if err != nil {
-		return
-	}
-
-	product, err := ph.productsStore.GetProductById(id)
-
-	if err == sql.ErrNoRows {
-		ph.logger.Warn("Attempted to find product by id, but product didn't exist.")
-		http.Error(w, "Product not found.", http.StatusNotFound)
-		return
-	}
-
-	if err != nil {
-		ph.logger.Warn("Error when finding product from database.")
-		http.Error(w, "Error finding product.", http.StatusInternalServerError)
-		return
-	}
-	helpers.RenderTemplate(w, "html/templates/productDetails", product, ph.logger)
-}
-
-func (ph *ProductsHandler) ProductsList(w http.ResponseWriter, r *http.Request) {
-	products, err := ph.productsStore.GetAllProducts()
-
-	if err != nil {
-		ph.logger.Error("Could not get products from store. Writing error response.")
-		http.Error(w, "Server error when trying to load products.", http.StatusInternalServerError)
-		return
-	}
-
-	helpers.RenderTemplate(w, "html/templates/productsList.html", products, ph.logger)
 }
