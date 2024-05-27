@@ -1,15 +1,18 @@
 {{range .}}
 <div id="product-{{.Id}}" class="col-4">
-    <div class="card">
-	<div class="card-body">
-	    <img src="https://www.startpage.com/av/proxy-image?piurl=https%3A%2F%2Fwww.ikea.com%2Fca%2Fen%2Fimages%2Fproducts%2Fproppmaett-chopping-board-beech__0711768_pe728460_s5.jpg&sp=1715109820T6e0fd1c6ab4ab689cacf85d8cbd07b7af68454dc590fd69df81891e092e31dfd" alt="" class="card-img-top">
-            <h5 class="card-title">{{.Name}}</h5>
-	    <p class="card-text">
-		Price: {{.Price}} <br>
-		Category: {{.Category}}
-	    </p>
+    <a href="products/{{.Id}}">
+        <div class="card">
+            <div class="card-body">
+                <img src="https://www.startpage.com/av/proxy-image?piurl=https%3A%2F%2Fwww.ikea.com%2Fca%2Fen%2Fimages%2Fproducts%2Fproppmaett-chopping-board-beech__0711768_pe728460_s5.jpg&sp=1715109820T6e0fd1c6ab4ab689cacf85d8cbd07b7af68454dc590fd69df81891e092e31dfd"
+                     alt="" class="card-img-top">
+                <h5 class="card-title">{{.Name}}</h5>
+                <p class="card-text">
+                    Price: {{.Price}} <br>
+                    Category: {{.Category}}
+                </p>
+            </div>
         </div>
-    </div>
 
+    </a>
 </div>
 {{end}}
