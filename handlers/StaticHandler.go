@@ -20,6 +20,7 @@ type StaticHandler struct {
 	logger     *slog.Logger
 }
 
+// NewStaticHandler creates a StaticHandler struct and returns a pointer to it.
 func NewStaticHandler(staticPath string, template string, error string, logger *slog.Logger) *StaticHandler {
 	return &StaticHandler{
 		staticPath: staticPath,
@@ -29,6 +30,8 @@ func NewStaticHandler(staticPath string, template string, error string, logger *
 	}
 }
 
+// Render method attempts to write a templated view to the http.ResponseWriter. It takes a string as the path to the page
+// to load into the template, and attempts to load that template into the StaticHandler.template field.
 func (sh *StaticHandler) Render(w http.ResponseWriter, page string, data ...interface{}) {
 	//start test
 	sh.logger.Info(fmt.Sprintf("Data is: %+v", data))
@@ -61,6 +64,8 @@ func (sh *StaticHandler) Render(w http.ResponseWriter, page string, data ...inte
 	return
 }
 
+// tryServePage attempts to execute the template based on the page it is provided.
+// Returns early with an error if there is any trouble loading the page.
 func (sh *StaticHandler) tryServePage(page string, w http.ResponseWriter, data ...interface{}) error {
 	tmpl, err := template.ParseFiles(sh.template, page)
 	if err != nil {
@@ -75,6 +80,8 @@ func (sh *StaticHandler) tryServePage(page string, w http.ResponseWriter, data .
 	return nil
 }
 
+// nextPage adds a specified suffix to the current page and returns it.
+// Also logs that the page could not be found and is attempting to find it at another location.
 func (sh *StaticHandler) nextPage(page, nextLocation string) string {
 	message := "Could not find page: " + page + ". "
 	page = path.Join(page, nextLocation)
@@ -84,6 +91,8 @@ func (sh *StaticHandler) nextPage(page, nextLocation string) string {
 	return page
 }
 
+// HandleRequest is the default request handler for static file handling.
+// It takes the path from the url and checks sends it to the Render method.
 func (sh *StaticHandler) HandleRequests(w http.ResponseWriter, r *http.Request) {
 	url := filepath.Clean(r.URL.String())
 	sh.Render(w, url)
