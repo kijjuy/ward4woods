@@ -28,11 +28,16 @@ func NewStaticHandler(staticPath string, template string, error string, logger *
 	}
 }
 
-func (sh *StaticHandler) Render(w http.ResponseWriter, page string) {
+func (sh *StaticHandler) Render(w http.ResponseWriter, page string, dataArr ...interface{}) {
+	var data interface{}
+	if len(dataArr) == 1 {
+		data = dataArr[0]
+	}
+	sh.logger.Info(fmt.Sprintf("Data is: %+v", data))
 	page = filepath.Join(sh.staticPath, page)
 	tmpl, err := template.ParseFiles(sh.template, page)
 	if err == nil {
-		tmpl.Execute(w, nil)
+		tmpl.Execute(w, data)
 		sh.logger.Info(fmt.Sprintf("Now serving page: %s", page))
 		return
 	}
@@ -44,7 +49,7 @@ func (sh *StaticHandler) Render(w http.ResponseWriter, page string) {
 
 	tmpl, err = template.ParseFiles(sh.template, page)
 	if err == nil {
-		tmpl.Execute(w, nil)
+		tmpl.Execute(w, data)
 		sh.logger.Info(fmt.Sprintf("Now serving page: %s", page))
 		return
 	}
@@ -56,7 +61,7 @@ func (sh *StaticHandler) Render(w http.ResponseWriter, page string) {
 		sh.logger.Error(fmt.Sprintf("Attempted to find template page at: %s. Attempted to find error page at %s.", sh.template, sh.error))
 		return
 	}
-	tmpl.Execute(w, nil)
+	tmpl.Execute(w, data)
 	return
 }
 
