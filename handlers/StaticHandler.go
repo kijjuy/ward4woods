@@ -1,18 +1,16 @@
 package handlers
 
 import (
-	"database/sql"
 	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
-	"os"
 	"path"
 	"path/filepath"
-	"ward4woods.ca/data"
-	"ward4woods.ca/helpers"
 )
 
+// A StaticHandler is meant to handle requests that require an entire page to be loaded. These pages will be
+// constructed by the html/template package and returned to the browser.
 type StaticHandler struct {
 	staticPath string
 	template   string
@@ -32,20 +30,15 @@ func NewStaticHandler(staticPath string, template string, error string, logger *
 
 // Render method attempts to write a templated view to the http.ResponseWriter. It takes a string as the path to the page
 // to load into the template, and attempts to load that template into the StaticHandler.template field.
-func (sh *StaticHandler) Render(w http.ResponseWriter, page string, data ...interface{}) {
-	//start test
-	sh.logger.Info(fmt.Sprintf("Data is: %+v", data))
-
-	testTemplate, _ := template.New("Test").Parse("Name is: {{.Name}}. Id is: {{.Id}}\n")
-	_ = testTemplate.Execute(os.Stdout, data)
-
-	//End test
+func (sh *StaticHandler) Render(w http.ResponseWriter, page string, data interface{}) {
 	page = filepath.Join(sh.staticPath, page)
 
 	err := sh.tryServePage(page, w, data)
 	if err == nil {
 		return
 	}
+
+	sh.logger.Warn("Error Rendering Page:", "Error", err)
 
 	page = sh.nextPage(page, "index.html")
 
@@ -66,13 +59,22 @@ func (sh *StaticHandler) Render(w http.ResponseWriter, page string, data ...inte
 
 // tryServePage attempts to execute the template based on the page it is provided.
 // Returns early with an error if there is any trouble loading the page.
-func (sh *StaticHandler) tryServePage(page string, w http.ResponseWriter, data ...interface{}) error {
-	tmpl, err := template.ParseFiles(sh.template, page)
+func (sh *StaticHandler) tryServePage(page string, w http.ResponseWriter, Data interface{}) error {
+	tmpl, err := template.New("content").ParseFiles(page)
 	if err != nil {
+		sh.logger.Error("Error parsing content template.", "Error", err)
 		return err
 	}
 
-	if err := tmpl.Execute(w, data); err != nil {
+	tmpl, err = tmpl.ParseFiles(sh.template)
+	if err != nil {
+		sh.logger.Error("Error parsing layout template.", "Error", err)
+		return err
+	}
+
+	fmt.Printf("Data is: %+v\n", Data)
+	if err := tmpl.ExecuteTemplate(w, "layout", Data); err != nil {
+		sh.logger.Error("Error executing layout template.", "Error", err)
 		return err
 	}
 
@@ -91,33 +93,9 @@ func (sh *StaticHandler) nextPage(page, nextLocation string) string {
 	return page
 }
 
-// HandleRequest is the default request handler for static file handling.
+// HandleRequests is the default request handler for static file handling.
 // It takes the path from the url and checks sends it to the Render method.
 func (sh *StaticHandler) HandleRequests(w http.ResponseWriter, r *http.Request) {
 	url := filepath.Clean(r.URL.String())
-	sh.Render(w, url)
-}
-func (sh *StaticHandler) ProductsDetails(w http.ResponseWriter, r *http.Request, productsStore *data.ProductsStore) {
-	id, err := helpers.GetIdFromRequest(w, r, "/products/")
-	if err != nil {
-		return
-	}
-
-	product, err := productsStore.GetProductById(id)
-
-	if err == sql.ErrNoRows {
-		sh.logger.Warn("Attempted to find product by id, but product didn't exist.")
-		http.Error(w, "Product not found.", http.StatusNotFound)
-		return
-	}
-
-	if err != nil {
-		sh.logger.Warn("Error when finding product from database.")
-		http.Error(w, "Error finding product.", http.StatusInternalServerError)
-		return
-	}
-
-	sh.logger.Info(fmt.Sprintf("now serving details page for product: %+v", product))
-
-	sh.Render(w, "templates/productDetails.html", product)
+	sh.Render(w, url, nil)
 }
