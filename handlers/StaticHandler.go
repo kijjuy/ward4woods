@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"ward4woods.ca/data"
@@ -28,41 +29,59 @@ func NewStaticHandler(staticPath string, template string, error string, logger *
 	}
 }
 
-func (sh *StaticHandler) Render(w http.ResponseWriter, page string, dataArr ...interface{}) {
-	var data interface{}
-	if len(dataArr) == 1 {
-		data = dataArr[0]
-	}
+func (sh *StaticHandler) Render(w http.ResponseWriter, page string, data ...interface{}) {
+	//start test
 	sh.logger.Info(fmt.Sprintf("Data is: %+v", data))
+
+	testTemplate, _ := template.New("Test").Parse("Name is: {{.Name}}. Id is: {{.Id}}\n")
+	_ = testTemplate.Execute(os.Stdout, data)
+
+	//End test
 	page = filepath.Join(sh.staticPath, page)
-	tmpl, err := template.ParseFiles(sh.template, page)
+
+	err := sh.tryServePage(page, w, data)
 	if err == nil {
-		tmpl.Execute(w, data)
-		sh.logger.Info(fmt.Sprintf("Now serving page: %s", page))
 		return
 	}
 
-	message := "Could not find page: " + page + ". "
-	page = path.Join(page, "index.html")
-	message += "Checking: " + page
-	sh.logger.Info(fmt.Sprintf("%s Error: %s", message, err))
+	page = sh.nextPage(page, "index.html")
 
-	tmpl, err = template.ParseFiles(sh.template, page)
-	if err == nil {
-		tmpl.Execute(w, data)
-		sh.logger.Info(fmt.Sprintf("Now serving page: %s", page))
+	if err := sh.tryServePage(page, w, data); err == nil {
 		return
 	}
 
 	sh.logger.Info(fmt.Sprintf("Could not find page. Loading error view. Error: %s", err))
-	tmpl, err = tmpl.ParseFiles(sh.template, sh.error)
+	errorPage := filepath.Join(sh.staticPath, "error.html")
+	err = sh.tryServePage(errorPage, w, nil)
 	if err != nil {
 		sh.logger.Error(fmt.Sprintf("Could not find error page. Error: '%s'.", err))
 		sh.logger.Error(fmt.Sprintf("Attempted to find template page at: %s. Attempted to find error page at %s.", sh.template, sh.error))
 		return
 	}
-	tmpl.Execute(w, data)
 	return
+}
+
+func (sh *StaticHandler) tryServePage(page string, w http.ResponseWriter, data ...interface{}) error {
+	tmpl, err := template.ParseFiles(sh.template, page)
+	if err != nil {
+		return err
+	}
+
+	if err := tmpl.Execute(w, data); err != nil {
+		return err
+	}
+
+	sh.logger.Info(fmt.Sprintf("Now serving page: %s", page))
+	return nil
+}
+
+func (sh *StaticHandler) nextPage(page, nextLocation string) string {
+	message := "Could not find page: " + page + ". "
+	page = path.Join(page, nextLocation)
+	message += "Checking: " + page
+
+	sh.logger.Info(message)
+	return page
 }
 
 func (sh *StaticHandler) HandleRequests(w http.ResponseWriter, r *http.Request) {
