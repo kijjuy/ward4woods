@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
-	"strings"
-
 	"ward4woods.ca/data"
 	"ward4woods.ca/helpers"
 	"ward4woods.ca/models"
@@ -101,17 +98,5 @@ func (ph *ProductsHandler) DeleteProductById(w http.ResponseWriter, r *http.Requ
 
 func (ph *ProductsHandler) getIdFromApiRequest(w http.ResponseWriter, r *http.Request) (int, error) {
 	prefix := "api/products"
-	return ph.getIdFromRequest(w, r, prefix)
-}
-
-func (ph *ProductsHandler) getIdFromRequest(w http.ResponseWriter, r *http.Request, prefix string) (int, error) {
-	idStr := strings.TrimPrefix(r.URL.String(), prefix)
-	id, err := strconv.Atoi(idStr)
-
-	if err != nil {
-		ph.logger.Warn("Could not get products by id: invalid id.", "Error", err)
-		fmt.Fprintf(w, "Invalid product id.")
-	}
-
-	return id, err
+	return helpers.GetIdFromRequest(w, r, prefix)
 }

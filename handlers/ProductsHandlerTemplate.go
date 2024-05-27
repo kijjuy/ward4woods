@@ -42,5 +42,5 @@ func (ph *ProductsHandler) ProductsList(w http.ResponseWriter, r *http.Request) 
 
 func (ph *ProductsHandler) getIdFromTemplateRequest(w http.ResponseWriter, r *http.Request) (int, error) {
 	prefix := "/products/"
-	return ph.getIdFromRequest(w, r, prefix)
+	return helpers.GetIdFromRequest(w, r, prefix)
 }
