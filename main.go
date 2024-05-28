@@ -71,7 +71,7 @@ func setupStatic(mux *http.ServeMux, productsStore *data.ProductsStore, logger *
 	})
 
 	mux.HandleFunc("/products/{id}", func(w http.ResponseWriter, r *http.Request) {
-		staticHandler.Render(w, "products/details.html", nil)
+		staticHandler.ProductsDetails(w, r, productsStore)
 	})
 
 	mux.HandleFunc("/", staticHandler.HandleRequests)

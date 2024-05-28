@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"path"
 	"path/filepath"
+	"ward4woods.ca/data"
+	"ward4woods.ca/helpers"
 )
 
 // A StaticHandler is meant to handle requests that require an entire page to be loaded. These pages will be
@@ -59,22 +62,23 @@ func (sh *StaticHandler) Render(w http.ResponseWriter, page string, data interfa
 
 // tryServePage attempts to execute the template based on the page it is provided.
 // Returns early with an error if there is any trouble loading the page.
-func (sh *StaticHandler) tryServePage(page string, w http.ResponseWriter, Data interface{}) error {
-	tmpl, err := template.New("content").ParseFiles(page)
+func (sh *StaticHandler) tryServePage(page string, w http.ResponseWriter, data interface{}) error {
+
+	tmpl, err := template.New("layout").ParseFiles(sh.template)
 	if err != nil {
-		sh.logger.Error("Error parsing content template.", "Error", err)
+		sh.logger.Warn("Error parsing layout template.", "Error", err)
 		return err
 	}
 
-	tmpl, err = tmpl.ParseFiles(sh.template)
+	tmpl, err = tmpl.New("content").ParseFiles(page)
 	if err != nil {
-		sh.logger.Error("Error parsing layout template.", "Error", err)
+		sh.logger.Warn("Error parsing content template.", "Error", err)
 		return err
 	}
 
-	fmt.Printf("Data is: %+v\n", Data)
-	if err := tmpl.ExecuteTemplate(w, "layout", Data); err != nil {
-		sh.logger.Error("Error executing layout template.", "Error", err)
+	fmt.Printf("Data passed to template: %+v\n", data)
+	if err := tmpl.ExecuteTemplate(w, "layout", data); err != nil {
+		sh.logger.Warn("Error executing layout template.", "Error", err)
 		return err
 	}
 
@@ -98,4 +102,33 @@ func (sh *StaticHandler) nextPage(page, nextLocation string) string {
 func (sh *StaticHandler) HandleRequests(w http.ResponseWriter, r *http.Request) {
 	url := filepath.Clean(r.URL.String())
 	sh.Render(w, url, nil)
+}
+
+// ProductsDetails handles creating the individual page for each product.
+// Will be sent requests from the URL '/products/{id}'
+func (sh *StaticHandler) ProductsDetails(w http.ResponseWriter, r *http.Request, productsStore *data.ProductsStore) {
+	id, err := helpers.GetIdFromRequest(w, r, "/products/")
+	if err != nil {
+		return
+	}
+
+	product, err := productsStore.GetProductById(id)
+
+	if err == sql.ErrNoRows {
+		sh.logger.Warn("Attempted to find product by id, but product didn't exist.")
+		http.Error(w, "Product not found.", http.StatusNotFound)
+		return
+	}
+
+	if err != nil {
+		sh.logger.Warn("Error when finding product from database.")
+		http.Error(w, "Error finding product.", http.StatusInternalServerError)
+		return
+	}
+
+	sh.logger.Info(fmt.Sprintf("now serving details page for product: %+v", product))
+
+	sh.Render(w, "templates/productDetails.html", product)
+
+	//TODO: Setup details page to work with htmx rather than loading 2 templates form go
 }
