@@ -76,7 +76,6 @@ func (sh *StaticHandler) tryServePage(page string, w http.ResponseWriter, data i
 		return err
 	}
 
-	fmt.Printf("Data passed to template: %+v\n", data)
 	if err := tmpl.ExecuteTemplate(w, "layout", data); err != nil {
 		sh.logger.Warn("Error executing layout template.", "Error", err)
 		return err

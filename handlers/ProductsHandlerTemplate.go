@@ -1,10 +1,7 @@
 package handlers
 
 import (
-	"database/sql"
-	"fmt"
 	"net/http"
-	"ward4woods.ca/data"
 	"ward4woods.ca/helpers"
 )
 
