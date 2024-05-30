@@ -1,102 +1,109 @@
 package handlers
 
 import (
-	"database/sql"
-	"encoding/json"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"net/http"
-	"ward4woods.ca/data"
+
+	"ward4woods.ca/application"
 	"ward4woods.ca/helpers"
-	"ward4woods.ca/models"
 )
 
+const (
+	errorPath = "html/error.html"
+)
+
+type Result struct {
+	data interface{}
+	err  error
+}
+
 type ProductsHandler struct {
-	productsStore *data.ProductsStore
-	logger        *slog.Logger
+	routes
+	logger *slog.Logger
 }
 
-func NewProductsHandler(productsStore *data.ProductsStore, logger *slog.Logger) *ProductsHandler {
-	return &ProductsHandler{
-		productsStore: productsStore,
-		logger:        logger.With("Location", "ProductsHandler"),
+type LogicFunc func(...interface{}) (interface{}, error)
+
+type handlerAndPath struct {
+	logicFunc LogicFunc
+	path      string
+}
+
+type routes map[string]*handlerAndPath
+
+func NewProductsHandler(logger *slog.Logger) *ProductsHandler {
+	ph := &ProductsHandler{
+		logger: logger.With("Location", "ProductsHandler"),
+	}
+	ph.logger.Info("Created product handler successfully.")
+	return ph
+}
+
+// render renders the response from an html/template specified by templatePath using generic interface{} data.
+func (ph *ProductsHandler) render(w http.ResponseWriter, templatePath string, data interface{}) {
+	tmpl, err := template.ParseFiles(templatePath)
+	if err != nil {
+		ph.logger.Error("Could not load template files.", "Error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		ph.logger.Error("Could not execute template.", "Error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
-func (ph *ProductsHandler) GetAllProducts(w http.ResponseWriter, r *http.Request) {
-	products, err := ph.productsStore.GetAllProducts()
-
-	if err != nil {
-		ph.logger.Error("Could not get products from store. Writing error response.")
-		fmt.Fprintf(w, "Server error when trying to load products.")
-		return
-	}
-
-	helpers.RenderTemplate(w, "html/templates/productsList.html", products)
+func (ph *ProductsHandler) renderError(w http.ResponseWriter, err error) {
+	ph.render(w, errorPath, err)
 }
 
-func (ph *ProductsHandler) GetProductById(w http.ResponseWriter, r *http.Request) {
-	id, err := ph.getIdFromApiRequest(w, r)
-	if err != nil {
-		return
+func (ph *ProductsHandler) AddHandler(route, htmlLocation string, logicFunc LogicFunc) {
+	if ph.routes == nil {
+		ph.routes = make(routes)
 	}
 
-	product, err := ph.productsStore.GetProductById(id)
-
-	if err == sql.ErrNoRows {
-		fmt.Fprint(w, "Product not found.")
-		ph.logger.Info("Attempted to find product by id, but product didn't exist.")
-		return
-	}
-
-	if err != nil {
-		fmt.Fprint(w, "Error finding product.")
-		ph.logger.Warn("Error when finding product from database.")
-		return
-	}
-
-	json.NewEncoder(w).Encode(product)
+	ph.routes[route] = &handlerAndPath{logicFunc: logicFunc, path: htmlLocation}
 }
 
-func (ph *ProductsHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	product := models.Product{}
-	err := json.NewDecoder(r.Body).Decode(&product)
-
+func (ph *ProductsHandler) Handle(w http.ResponseWriter, path string, data interface{}, err error) {
 	if err != nil {
-		ph.logger.Error("Could not parse product from body. Error:", err)
-		fmt.Fprintf(w, "Error parsing product from json.")
+		ph.logger.Error("Error when trying to load response", "Error", err)
+		ph.renderError(w, err)
 		return
 	}
 
-	err = ph.productsStore.AddProduct(product)
-
-	if err != nil {
-		ph.logger.Warn("Error adding product to product store.")
-		fmt.Fprintf(w, "Error adding product to database.")
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	ph.logger.Info(fmt.Sprintf("Now generating response with data: [%+v]", data))
+	ph.render(w, path, data)
 }
 
-func (ph *ProductsHandler) DeleteProductById(w http.ResponseWriter, r *http.Request) {
-	id, err := ph.getIdFromApiRequest(w, r)
-
-	if err != nil {
-		return
+func (ph *ProductsHandler) RegisterRoutes(router *application.Router) {
+	for route, funcAndPath := range ph.routes {
+		router.AddRoute(route, func(w http.ResponseWriter, r *http.Request) {
+			result, err := funcAndPath.logicFunc("adsf")
+			if err != nil {
+				ph.renderError(w, err)
+				return
+			}
+			ph.render(w, funcAndPath.path, result)
+		})
 	}
-
-	err = ph.productsStore.DeleteProductById(id)
-
-	if err != nil {
-		fmt.Fprintf(w, "Error deleting product.")
-		ph.logger.Warn("Could not delete product from products store.")
-	}
-
-	w.WriteHeader(http.StatusOK)
 }
 
-func (ph *ProductsHandler) getIdFromApiRequest(w http.ResponseWriter, r *http.Request) (int, error) {
+// TryWriteError checks if error is nil. If it is not, it writes the error response and returns true.
+// If the error is nil, it doesn nothing then returns false.
+func (ph *ProductsHandler) TryWriteError(w http.ResponseWriter, err error) bool {
+	if err != nil {
+		ph.renderError(w, err)
+		return true
+	}
+	return false
+}
+
+func GetIdFromApiRequest(r *http.Request) (int, error) {
 	prefix := "api/products"
-	return helpers.GetIdFromRequest(w, r, prefix)
+	return helpers.GetIdFromRequest(r, prefix)
 }

@@ -3,18 +3,35 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 
 	"log/slog"
 
+	"github.com/gorilla/sessions"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"ward4woods.ca/application"
 	"ward4woods.ca/data"
 	"ward4woods.ca/handlers"
+	"ward4woods.ca/services"
 )
 
-func createDb(conString string, logger *slog.Logger) *sql.DB {
+const (
+	cartSessionName = "castSession"
+)
+
+func loadDotEnv() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file.")
+	}
+}
+
+func createDb(logger *slog.Logger) *sql.DB {
+	conString := os.Getenv("DATABASE_URL")
 	logger.Info("Connecting to database...")
 	db, err := sql.Open("postgres", conString)
 	if err != nil {
@@ -25,39 +42,66 @@ func createDb(conString string, logger *slog.Logger) *sql.DB {
 	return db
 }
 
+func createSessionStore() *sessions.CookieStore {
+	sessionKey := []byte(os.Getenv("SESSION_KEY"))
+
+	sessionStore := sessions.NewCookieStore([]byte(sessionKey))
+	slog.Info("Session store created successfully.")
+	return sessionStore
+}
+
 func createProductsStore(db *sql.DB, logger *slog.Logger) *data.ProductsStore {
 	return data.NewProductsStore(db, logger)
 }
 
-func setupProduct(mux *http.ServeMux, productsStore *data.ProductsStore, logger *slog.Logger) {
+func setupProduct(router *application.Router, productsStore *data.ProductsStore, logger *slog.Logger, sessionStore *sessions.CookieStore) {
 
-	productsHandler := handlers.NewProductsHandler(productsStore, logger)
+	productsHandler := handlers.NewProductsHandler(logger)
+	productsCartStore := data.NewProductsCartStore(cartSessionName)
+	productService := services.NewProductService(productsStore, productsCartStore)
 
-	mux.HandleFunc("/api/products", func(w http.ResponseWriter, r *http.Request) {
+	router.AddRoute("/api/products", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			productsHandler.ProductsList(w, r)
-			break
-		case http.MethodPost:
-			productsHandler.CreateProduct(w, r)
+			result, err := productService.GetAllProducts()
+			productsHandler.Handle(w, "html/templates/productsList.html", result, err)
 			break
 		}
 	})
 
-	mux.HandleFunc("/api/products/{id}", func(w http.ResponseWriter, r *http.Request) {
+	router.AddRoute("/api/products/{id}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			productsHandler.GetProductById(w, r)
+			id, err := handlers.GetIdFromApiRequest(r)
+			if productsHandler.TryWriteError(w, err) {
+				break
+			}
+			result, err := productService.GetProductById(id)
+			productsHandler.Handle(w, "html/templates/productsDetails.html", result, err)
 			break
-		case http.MethodDelete:
-			productsHandler.DeleteProductById(w, r)
-			break
+		}
+	})
+
+	router.AddRoute("/api/addToCart/{id}", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			id, err := handlers.GetIdFromApiRequest(r)
+			if productsHandler.TryWriteError(w, err) {
+				break
+			}
+
+			session, err := sessionStore.Get(r, productsCartStore.CartSessionId)
+			if productsHandler.TryWriteError(w, err) {
+				break
+			}
+
+			err = productService.AddToCart(id, session)
 		}
 	})
 
 }
 
-func setupStatic(mux *http.ServeMux, productsStore *data.ProductsStore, logger *slog.Logger) {
+func setupStatic(router *application.Router, productsStore *data.ProductsStore, logger *slog.Logger) {
 	htmlPath := "html"
 	templatePath := filepath.Join(htmlPath, "_layout.html")
 	errorPath := filepath.Join(htmlPath, "error.html")
@@ -65,35 +109,36 @@ func setupStatic(mux *http.ServeMux, productsStore *data.ProductsStore, logger *
 	logger.Info(fmt.Sprintf("New static handler created with template path: '%s' and error path: '%s'", templatePath, errorPath))
 	staticHandler := handlers.NewStaticHandler(htmlPath, templatePath, errorPath, logger)
 
-	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+	router.AddRoute("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		faviconPath := filepath.Join(htmlPath, "favicon.ico")
 		http.ServeFile(w, r, faviconPath)
 	})
 
-	mux.HandleFunc("/products/{id}", func(w http.ResponseWriter, r *http.Request) {
+	router.AddRoute("/products/{id}", func(w http.ResponseWriter, r *http.Request) {
 		staticHandler.ProductsDetails(w, r, productsStore)
 	})
 
-	mux.HandleFunc("/", staticHandler.HandleRequests)
+	router.AddRoute("/", staticHandler.HandleRequests)
 }
 
 func main() {
+	loadDotEnv()
 	port := ":8080"
 	logger := slog.Default()
 
-	conString := "postgres://postgres@172.17.0.2:5432?password=Password@1&sslmode=disable"
-	db := createDb(conString, logger)
+	db := createDb(logger)
+	sessionStore := createSessionStore()
 
 	productsStore := createProductsStore(db, logger)
 
-	mux := http.NewServeMux()
+	router := application.NewRouter()
 
-	setupProduct(mux, productsStore, logger)
+	setupProduct(router, productsStore, logger, sessionStore)
 
-	setupStatic(mux, productsStore, logger)
+	setupStatic(router, productsStore, logger)
 
 	logger.Info(fmt.Sprintf("Application now lisening at: localhost%s", port))
-	err := http.ListenAndServe(port, mux)
+	err := http.ListenAndServe(port, router.Serve())
 
 	logger.Error("Application crashed.", "Error", err)
 }

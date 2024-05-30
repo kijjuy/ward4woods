@@ -106,7 +106,7 @@ func (sh *StaticHandler) HandleRequests(w http.ResponseWriter, r *http.Request) 
 // ProductsDetails handles creating the individual page for each product.
 // Will be sent requests from the URL '/products/{id}'
 func (sh *StaticHandler) ProductsDetails(w http.ResponseWriter, r *http.Request, productsStore *data.ProductsStore) {
-	id, err := helpers.GetIdFromRequest(w, r, "/products/")
+	id, err := helpers.GetIdFromRequest(r, "/products/")
 	if err != nil {
 		return
 	}
