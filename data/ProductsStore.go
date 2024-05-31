@@ -3,8 +3,8 @@ package data
 import (
 	"database/sql"
 	"fmt"
-	"log/slog"
 
+	"ward4woods.ca/application"
 	"ward4woods.ca/models"
 )
 
@@ -18,13 +18,13 @@ type IProductsStore interface {
 
 type ProductsStore struct {
 	db     *sql.DB
-	logger *slog.Logger
+	logger *application.Logger
 }
 
-func NewProductsStore(db *sql.DB, logger *slog.Logger) *ProductsStore {
+func NewProductsStore(db *sql.DB, logger *application.Logger) *ProductsStore {
 	return &ProductsStore{
 		db:     db,
-		logger: logger.With("Location", "ProductsStore"),
+		logger: logger,
 	}
 }
 
@@ -41,14 +41,14 @@ func (ps *ProductsStore) GetAllProducts() ([]models.Product, error) {
 		ps.logger.Error("Could not get records from products table. Error:", err)
 	}
 
-	ps.logger.Info(fmt.Sprintf("Got %d records from products table.", len(products)))
+	ps.logger.Info(fmt.Sprintf("Got %d records from products table.", len(products)), nil)
 	return products, nil
 }
 
 func (ps *ProductsStore) GetProductById(id int) (models.Product, error) {
 	row := ps.db.QueryRow("SELECT * FROM products WHERE product_id = $1", id)
 	product, err := scanProduct(row)
-	ps.logger.Info("Got product by id.")
+	ps.logger.Info("Got product by id.", nil)
 	return product, err
 }
 
@@ -57,16 +57,16 @@ func (ps *ProductsStore) AddProduct(product models.Product) error {
 		product.Name, product.Price, product.Description, product.Category)
 
 	if err != nil {
-		ps.logger.Error("Could not create product.", "Error", err)
+		ps.logger.Error("Could not create product.", err)
 	}
 
 	id, err := result.LastInsertId()
 
 	if err != nil {
-		ps.logger.Error("Error getting id of new database product.", "Error", err)
+		ps.logger.Error("Error getting id of new database product.", err)
 	}
 
-	ps.logger.Info("Product added to database.", "New product_id", id)
+	ps.logger.Info("Product added to database.", nil, "New product_id", id)
 	return nil
 }
 
@@ -74,10 +74,10 @@ func (ps *ProductsStore) DeleteProductById(id int) error {
 	_, err := ps.db.Exec("DELETE FROM products WHERE product_id = $1", id)
 
 	if err != nil {
-		ps.logger.Error("Error when deleting product from database.", "Error", err)
+		ps.logger.Error("Error when deleting product from database.", err)
 	}
 
-	ps.logger.Info("Product successfully deleted.")
+	ps.logger.Info("Product successfully deleted.", nil)
 	return nil
 }
 
