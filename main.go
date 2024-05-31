@@ -49,53 +49,6 @@ func createProductsStore(db *sql.DB, logger *application.Logger) *data.ProductsS
 	return data.NewProductsStore(db, logger)
 }
 
-func setupProduct(router *application.Router, productsStore *data.ProductsStore, logger *slog.Logger, sessionStore *sessions.CookieStore) {
-
-	productsHandler := handlers.NewProductsHandler(logger)
-	productsCartStore := data.NewProductsCartStore(cartSessionName)
-	productService := services.NewProductService(productsStore, productsCartStore)
-
-	router.AddRoute("/api/products", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			result, err := productService.GetAllProducts()
-			productsHandler.Handle(w, "html/templates/productsList.html", result, err)
-			break
-		}
-	})
-
-	router.AddRoute("/api/products/{id}", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			id, err := handlers.GetIdFromApiRequest(r)
-			if productsHandler.TryWriteError(w, err) {
-				break
-			}
-			result, err := productService.GetProductById(id)
-			productsHandler.Handle(w, "html/templates/productsDetails.html", result, err)
-			break
-		}
-	})
-
-	router.AddRoute("/api/addToCart/{id}", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			id, err := handlers.GetIdFromApiRequest(r)
-			if productsHandler.TryWriteError(w, err) {
-				break
-			}
-
-			session, err := sessionStore.Get(r, productsCartStore.CartSessionId)
-			if productsHandler.TryWriteError(w, err) {
-				break
-			}
-
-			err = productService.AddToCart(id, session)
-		}
-	})
-
-}
-
 func setupStatic(router *application.Router, productsStore *data.ProductsStore, logger *application.Logger) {
 	htmlPath := "html"
 	templatePath := filepath.Join(htmlPath, "_layout.html")
