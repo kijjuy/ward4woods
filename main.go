@@ -16,11 +16,6 @@ import (
 	"ward4woods.ca/application"
 	"ward4woods.ca/data"
 	"ward4woods.ca/handlers"
-	"ward4woods.ca/services"
-)
-
-const (
-	cartSessionName = "castSession"
 )
 
 func loadDotEnv() {
