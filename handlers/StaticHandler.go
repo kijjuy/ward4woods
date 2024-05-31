@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"html/template"
-	"log/slog"
 	"net/http"
 	"path"
 	"path/filepath"
+
+	"ward4woods.ca/application"
 	"ward4woods.ca/data"
 	"ward4woods.ca/helpers"
 )
@@ -18,16 +19,16 @@ type StaticHandler struct {
 	staticPath string
 	template   string
 	error      string
-	logger     *slog.Logger
+	logger     *application.Logger
 }
 
 // NewStaticHandler creates a StaticHandler struct and returns a pointer to it.
-func NewStaticHandler(staticPath string, template string, error string, logger *slog.Logger) *StaticHandler {
+func NewStaticHandler(staticPath string, template string, error string, logger *application.Logger) *StaticHandler {
 	return &StaticHandler{
 		staticPath: staticPath,
 		template:   template,
 		error:      error,
-		logger:     logger.With("Location", "StaticHandler"),
+		logger:     logger,
 	}
 }
 
@@ -41,7 +42,7 @@ func (sh *StaticHandler) Render(w http.ResponseWriter, page string, data interfa
 		return
 	}
 
-	sh.logger.Warn("Error Rendering Page:", "Error", err)
+	sh.logger.Info("Error rendering page.", err)
 
 	page = sh.nextPage(page, "index.html")
 
@@ -49,12 +50,12 @@ func (sh *StaticHandler) Render(w http.ResponseWriter, page string, data interfa
 		return
 	}
 
-	sh.logger.Info(fmt.Sprintf("Could not find page. Loading error view. Error: %s", err))
+	sh.logger.Info("Could not find page. Loading error view.", err)
 	errorPage := filepath.Join(sh.staticPath, "error.html")
 	err = sh.tryServePage(errorPage, w, nil)
 	if err != nil {
-		sh.logger.Error(fmt.Sprintf("Could not find error page. Error: '%s'.", err))
-		sh.logger.Error(fmt.Sprintf("Attempted to find template page at: %s. Attempted to find error page at %s.", sh.template, sh.error))
+		sh.logger.Error("Could not find error page. Error: '%s'.", err)
+		sh.logger.Error(fmt.Sprintf("Attempted to find template page at: %s. Attempted to find error page at %s.", sh.template, sh.error), nil)
 		return
 	}
 	return
@@ -66,22 +67,22 @@ func (sh *StaticHandler) tryServePage(page string, w http.ResponseWriter, data i
 
 	tmpl, err := template.New("layout").ParseFiles(sh.template)
 	if err != nil {
-		sh.logger.Warn("Error parsing layout template.", "Error", err)
+		sh.logger.Info("Error parsing layout template.", err)
 		return err
 	}
 
 	tmpl, err = tmpl.New("content").ParseFiles(page)
 	if err != nil {
-		sh.logger.Warn("Error parsing content template.", "Error", err)
+		sh.logger.Info("Error parsing content template.", err)
 		return err
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "layout", data); err != nil {
-		sh.logger.Warn("Error executing layout template.", "Error", err)
+		sh.logger.Warn("Error executing layout template.", err)
 		return err
 	}
 
-	sh.logger.Info(fmt.Sprintf("Now serving page: %s", page))
+	sh.logger.Info(fmt.Sprintf("Now serving page: %s", page), nil)
 	return nil
 }
 
@@ -92,7 +93,7 @@ func (sh *StaticHandler) nextPage(page, nextLocation string) string {
 	page = path.Join(page, nextLocation)
 	message += "Checking: " + page
 
-	sh.logger.Info(message)
+	sh.logger.Info(message, nil)
 	return page
 }
 
@@ -114,18 +115,18 @@ func (sh *StaticHandler) ProductsDetails(w http.ResponseWriter, r *http.Request,
 	product, err := productsStore.GetProductById(id)
 
 	if err == sql.ErrNoRows {
-		sh.logger.Warn("Attempted to find product by id, but product didn't exist.")
+		sh.logger.Warn("Attempted to find product by id, but product didn't exist.", nil)
 		http.Error(w, "Product not found.", http.StatusNotFound)
 		return
 	}
 
 	if err != nil {
-		sh.logger.Warn("Error when finding product from database.")
+		sh.logger.Warn("Error when finding product from database.", nil)
 		http.Error(w, "Error finding product.", http.StatusInternalServerError)
 		return
 	}
 
-	sh.logger.Info(fmt.Sprintf("now serving details page for product: %+v", product))
+	sh.logger.Info(fmt.Sprintf("now serving details page for product: %+v", product), nil)
 
 	sh.Render(w, "templates/productDetails.html", product)
 
