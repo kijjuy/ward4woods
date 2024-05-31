@@ -1,109 +1,95 @@
 package handlers
 
 import (
-	"fmt"
-	"html/template"
-	"log/slog"
+	"github.com/gorilla/sessions"
 	"net/http"
-
 	"ward4woods.ca/application"
-	"ward4woods.ca/helpers"
+	"ward4woods.ca/data"
+	"ward4woods.ca/services"
 )
 
-const (
-	errorPath = "html/error.html"
-)
-
-type Result struct {
-	data interface{}
-	err  error
+type productsHandler struct {
+	router         *application.Router
+	apiHandler     *application.ApiHandler
+	productsStore  *data.ProductsStore
+	sessionStore   *sessions.CookieStore
+	productService *services.ProductService
+	logger         *application.Logger
 }
 
-type ProductsHandler struct {
-	routes
-	logger *slog.Logger
-}
+func HandleProducts(router *application.Router, productsStore *data.ProductsStore, logger *application.Logger, sessionStore *sessions.CookieStore) {
 
-type LogicFunc func(...interface{}) (interface{}, error)
+	apiHandler := application.NewApiHandler(logger)
+	productsCartStore := data.NewProductsCartStore(data.CartSessionName)
+	productService := services.NewProductService(productsStore, productsCartStore)
 
-type handlerAndPath struct {
-	logicFunc LogicFunc
-	path      string
-}
-
-type routes map[string]*handlerAndPath
-
-func NewProductsHandler(logger *slog.Logger) *ProductsHandler {
-	ph := &ProductsHandler{
-		logger: logger.With("Location", "ProductsHandler"),
+	ph := &productsHandler{
+		router:         router,
+		apiHandler:     apiHandler,
+		productsStore:  productsStore,
+		sessionStore:   sessionStore,
+		productService: productService,
+		logger:         logger,
 	}
-	ph.logger.Info("Created product handler successfully.")
-	return ph
+
+	router.AddRoute("/api/products", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			ph.getAllProducts(w)
+			break
+		}
+	})
+
+	router.AddRoute("/api/products/{id}", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			ph.productDetails(w, r)
+			break
+		}
+	})
+
+	router.AddRoute("/api/addToCart/{id}", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			ph.addToCart(w, r)
+			break
+		}
+	})
+
 }
 
-// render renders the response from an html/template specified by templatePath using generic interface{} data.
-func (ph *ProductsHandler) render(w http.ResponseWriter, templatePath string, data interface{}) {
-	tmpl, err := template.ParseFiles(templatePath)
-	if err != nil {
-		ph.logger.Error("Could not load template files.", "Error", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+func (ph *productsHandler) getAllProducts(w http.ResponseWriter) {
+	templateWriter := application.NewApiTemplateWriter("html/templates/productsList.html")
+	result, err := ph.productService.GetAllProducts()
+	if ph.apiHandler.TryWriteError(application.WriteServerError, w, err) {
 		return
 	}
 
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		ph.logger.Error("Could not execute template.", "Error", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	ph.apiHandler.Handle(templateWriter.WriteTemplate, w, result)
+}
+
+func (ph *productsHandler) productDetails(w http.ResponseWriter, r *http.Request) {
+
+	templateWriter := application.NewApiTemplateWriter("html/templates/productsDetails.html")
+	id, err := application.GetIdFromApiRequest(r)
+	if ph.apiHandler.TryWriteError(application.WriteServerError, w, err) {
+		return
 	}
+	result, err := ph.productService.GetProductById(id)
+	ph.apiHandler.Handle(templateWriter.WriteTemplate, w, result)
 }
 
-func (ph *ProductsHandler) renderError(w http.ResponseWriter, err error) {
-	ph.render(w, errorPath, err)
-}
+func (ph *productsHandler) addToCart(w http.ResponseWriter, r *http.Request) {
 
-func (ph *ProductsHandler) AddHandler(route, htmlLocation string, logicFunc LogicFunc) {
-	if ph.routes == nil {
-		ph.routes = make(routes)
-	}
-
-	ph.routes[route] = &handlerAndPath{logicFunc: logicFunc, path: htmlLocation}
-}
-
-func (ph *ProductsHandler) Handle(w http.ResponseWriter, path string, data interface{}, err error) {
-	if err != nil {
-		ph.logger.Error("Error when trying to load response", "Error", err)
-		ph.renderError(w, err)
+	id, err := application.GetIdFromApiRequest(r)
+	if ph.apiHandler.TryWriteError(application.WriteServerError, w, err) {
 		return
 	}
 
-	ph.logger.Info(fmt.Sprintf("Now generating response with data: [%+v]", data))
-	ph.render(w, path, data)
-}
-
-func (ph *ProductsHandler) RegisterRoutes(router *application.Router) {
-	for route, funcAndPath := range ph.routes {
-		router.AddRoute(route, func(w http.ResponseWriter, r *http.Request) {
-			result, err := funcAndPath.logicFunc("adsf")
-			if err != nil {
-				ph.renderError(w, err)
-				return
-			}
-			ph.render(w, funcAndPath.path, result)
-		})
+	session, err := ph.sessionStore.Get(r, data.CartSessionName)
+	if ph.apiHandler.TryWriteError(application.WriteServerError, w, err) {
+		return
 	}
-}
 
-// TryWriteError checks if error is nil. If it is not, it writes the error response and returns true.
-// If the error is nil, it doesn nothing then returns false.
-func (ph *ProductsHandler) TryWriteError(w http.ResponseWriter, err error) bool {
-	if err != nil {
-		ph.renderError(w, err)
-		return true
-	}
-	return false
-}
-
-func GetIdFromApiRequest(r *http.Request) (int, error) {
-	prefix := "api/products"
-	return helpers.GetIdFromRequest(r, prefix)
+	err = ph.productService.AddToCart(id, session)
 }
