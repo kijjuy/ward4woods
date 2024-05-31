@@ -7,6 +7,8 @@ import (
 	"ward4woods.ca/models"
 )
 
+var CartSessionName = "castSession"
+
 type ProductCartStore struct {
 	CartSessionId string
 }
