@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"ward4woods.ca/helpers"
+	"ward4woods.ca/models"
 )
 
 type ApiHandler struct {
@@ -40,7 +41,7 @@ func (apih *ApiHandler) TryWriteError(errorWriter ErrorWriter, w http.ResponseWr
 	return false
 }
 
-func GetIdFromApiRequest(r *http.Request) (int, error) {
+func GetIdFromApiRequest(r *http.Request) (models.ProductId, error) {
 	prefix := "api/products"
 	return helpers.GetIdFromRequest(r, prefix)
 }

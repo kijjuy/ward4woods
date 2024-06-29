@@ -9,16 +9,22 @@ import (
 )
 
 type IProductsStore interface {
-	GetAllProducts() ([]models.Product, error)
-	GetProductById(int) (models.Product, error)
+	GetAllProducts() (*[]models.Product, error)
+	GetProductById(models.ProductId) (models.Product, error)
 	AddProduct(models.Product) error
-	DeleteProductById(int) error
+	DeleteProductById(models.ProductId) error
 	UpdateProduct(models.Product) error
 }
 
 type ProductsStore struct {
 	db     *sql.DB
 	logger *application.Logger
+}
+
+type NilProductError struct{}
+
+func (npe *NilProductError) Error() string {
+	return "Product was nil"
 }
 
 func NewProductsStore(db *sql.DB, logger *application.Logger) *ProductsStore {
@@ -28,7 +34,7 @@ func NewProductsStore(db *sql.DB, logger *application.Logger) *ProductsStore {
 	}
 }
 
-func (ps *ProductsStore) GetAllProducts() ([]models.Product, error) {
+func (ps *ProductsStore) GetAllProducts() (*[]models.Product, error) {
 	rows, err := ps.db.Query("SELECT * FROM products")
 	if err != nil {
 		ps.logger.Error("Could not get all products from database. err: ", err)
@@ -42,12 +48,16 @@ func (ps *ProductsStore) GetAllProducts() ([]models.Product, error) {
 	}
 
 	ps.logger.Info(fmt.Sprintf("Got %d records from products table.", len(products)), nil)
-	return products, nil
+	return &products, nil
 }
 
-func (ps *ProductsStore) GetProductById(id int) (models.Product, error) {
+func (ps *ProductsStore) GetProductById(id models.ProductId) (models.Product, error) {
 	row := ps.db.QueryRow("SELECT * FROM products WHERE product_id = $1", id)
 	product, err := scanProduct(row)
+	emptyProduct := models.Product{}
+	if product == emptyProduct {
+		return product, &NilProductError{}
+	}
 	ps.logger.Info("Got product by id.", nil)
 	return product, err
 }
@@ -70,7 +80,7 @@ func (ps *ProductsStore) AddProduct(product models.Product) error {
 	return nil
 }
 
-func (ps *ProductsStore) DeleteProductById(id int) error {
+func (ps *ProductsStore) DeleteProductById(id models.ProductId) error {
 	_, err := ps.db.Exec("DELETE FROM products WHERE product_id = $1", id)
 
 	if err != nil {

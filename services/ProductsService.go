@@ -1,21 +1,40 @@
 package services
 
 import (
-	"github.com/gorilla/sessions"
+	"fmt"
 	"ward4woods.ca/data"
 	"ward4woods.ca/models"
 )
 
 type ProductService struct {
-	productsStore    *data.ProductsStore
-	productCartStore *data.ProductCartStore
+	productsStore data.IProductsStore
 }
 
-func NewProductService(productStore *data.ProductsStore, productsCartStore *data.ProductCartStore) *ProductService {
-	return &ProductService{productsStore: productStore, productCartStore: productsCartStore}
+type InvalidIdError struct{}
+
+func (ide *InvalidIdError) Error() string {
+	return "Invalid ID. ID must be a positive integer."
 }
 
-func (ps *ProductService) GetAllProducts() ([]models.Product, error) {
+type ProductNotExistError struct {
+	wantedId models.ProductId
+}
+
+func (pne *ProductNotExistError) Error() string {
+	return fmt.Sprintf("Product with id %d does not exits.", pne.wantedId)
+}
+
+type EmptyProductError struct{}
+
+func (epe *EmptyProductError) Error() string {
+	return "Product was empty."
+}
+
+func NewProductService(productStore data.IProductsStore) *ProductService {
+	return &ProductService{productsStore: productStore}
+}
+
+func (ps *ProductService) GetAllProducts() (*[]models.Product, error) {
 	products, err := ps.productsStore.GetAllProducts()
 	if err != nil {
 		return nil, err
@@ -23,21 +42,20 @@ func (ps *ProductService) GetAllProducts() ([]models.Product, error) {
 	return products, nil
 }
 
-func (ps *ProductService) GetProductById(id int) (models.Product, error) {
-	return ps.productsStore.GetProductById(id)
-
+func (ps *ProductService) GetProductById(id models.ProductId) (models.Product, error) {
+	if id < 1 {
+		return models.Product{}, &InvalidIdError{}
+	}
+	product, err := ps.productsStore.GetProductById(id)
+	if product.Id == 0 {
+		return product, &ProductNotExistError{id}
+	}
+	return product, err
 }
 
-func (ps *ProductService) AddToCart(productId int, session *sessions.Session) error {
-	product, err := ps.productsStore.GetProductById(productId)
-	if err != nil {
-		return err
+func (ps *ProductService) AddProduct(product models.Product) error {
+	if product.Id == 0 {
+		return &EmptyProductError{}
 	}
-
-	err = ps.productCartStore.AddProductToCart(session, &product)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ps.productsStore.AddProduct(product)
 }

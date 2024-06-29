@@ -9,9 +9,19 @@ import (
 
 var CartSessionName = "castSession"
 
+type IProductCartStore interface {
+	AddProductToCart(models.CartId, models.CartItem) error
+	RemoveProductFromCart(models.CartId, models.ProductId) error
+	GetItemsFromCartId(models.CartId) ([]models.CartItem, error)
+	ClearCart(models.CartId) error
+	GetCartById(models.CartId) (models.Cart, error)
+}
+
 type ProductCartStore struct {
 	CartSessionId string
 }
+
+var _ IProductCartStore = &ProductCartStore{}
 
 type productsCart []*models.Product
 
@@ -27,28 +37,30 @@ func (cs *ProductCartStore) tryCreateCart(session *sessions.Session) {
 	}
 }
 
-func (cs *ProductCartStore) AddProductToCart(session *sessions.Session, product *models.Product) error {
-	cart, err := cs.getCart(session)
-	if err != nil {
-		return err
-	}
-
-	cart = append(cart, product)
-	return nil
+func (cs *ProductCartStore) AddProductToCart(models.CartId, models.CartItem) error {
+	return fmt.Errorf("Not implemented")
 }
 
-func (cs *ProductCartStore) RemoveProductFromCart(session *sessions.Session, productIndex int) error {
-	cart, err := cs.getCart(session)
-	if err != nil {
-		return err
-	}
+func (cs *ProductCartStore) RemoveProductFromCart(cartId models.CartId, itemId models.ProductId) error {
+	return fmt.Errorf("Not implemented")
+}
 
-	if productIndex >= len(cart) {
-		return fmt.Errorf("Attempted to remove cart item outside of cart slice bounds.")
-	}
+func (cs *ProductCartStore) GetItemsFromCartId(id models.CartId) ([]models.CartItem, error) {
+	//TODO: Write select for cart
+	emptyItem := make([]models.CartItem, 0)
+	err := fmt.Errorf("not implemented")
+	return emptyItem, err
 
-	cart = append(cart[:productIndex], cart[productIndex+1:]...)
-	return nil
+}
+
+func (cs *ProductCartStore) GetCartById(id models.CartId) (models.Cart, error) {
+	emptyCart := models.Cart{}
+	err := fmt.Errorf("not implemented")
+	return emptyCart, err
+}
+
+func (cs *ProductCartStore) ClearCart(id models.CartId) error {
+	return fmt.Errorf("Not implemented")
 }
 
 func (cs *ProductCartStore) getCart(session *sessions.Session) (productsCart, error) {
