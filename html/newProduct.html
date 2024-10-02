@@ -1,0 +1,25 @@
+{{ define "newProduct" }}
+	<form hx-post="/products">
+		<div>
+			<label>Product Name</label>
+			<input type="text" name="name">
+		</div>
+		<div>
+			<label>Price</label>
+			<input type="number" name="price" step=".01">
+		</div>
+		<div>
+			<label>Description</label>
+			<input type="text" name="description">
+		</div>
+		<div>
+			<label>Category</label>
+			<select name="category" id="category">
+				<option value="Cutting Board">Cutting Board</option>
+				<option value="Charcuterie Board">Charcuterie Board</option>
+				<option value="Chopping Block">Chopping Block</option>
+			</select>
+		</div>
+		<button class="btn">Submit</button>
+	</form>
+{{ end }}

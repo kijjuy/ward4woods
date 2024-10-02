@@ -1,7 +1,5 @@
-{{define "title"}} Index {{end}}
-{{define "body"}}
-
-<div>index template</div>
-<a href="/products">Products</a>
-
-{{end}}
+{{ define "index" }}
+	{{ template "layout-before-content" }}
+	<a href="/products">View all products</a>
+	{{ template "layout-after-content" }}
+{{ end }}

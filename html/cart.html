@@ -1,0 +1,14 @@
+{{ define "cart" }}
+	{{ template "layout-before-content" }}
+	<h1>Cart Items</h1>
+	<h5 hx-delete="/cart" hx-target="#cart-container">Clear cart</h5>
+	<div id="cart-container">
+		{{ range . }}
+		<div id="cart-item-{{ .CartItemId }}">{{ .Product.Name }} | {{ .Product.Price }} | {{ .Product.Category }} | 
+			<div hx-delete="/cart/{{ .CartItemId }}" hx-target="#cart-item-{{ .CartItemId }}">Remove from cart</div>
+		</div>
+		{{ end }}
+	</div>
+	{{ template "layout-after-content" }}
+{{ end }}
+

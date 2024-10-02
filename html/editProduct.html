@@ -1,0 +1,24 @@
+{{ define "editProduct" }}
+	{{ template "layout-before-content" }}
+
+	<h1>Editing product: {{ .Name }}</h1>
+	<form hx-put="/products/{{.Id}}">
+		<input type="text" name="name" value="{{.Name}}">
+		<input type="number" step=".01" name="price" value="{{.Price}}">
+		<input type="text" name="description" value="{{.Description}}">
+		<div id="select-container" hx-get="/products/categories/{{.Id}}" hx-trigger="load">
+
+		</div>
+		<button class="btn btn-primary">Submit</submit>
+	</form>
+	
+	{{ template "layout-after-content" }}
+{{ end }}
+
+{{ define "categorySelect" }}
+	<select name="category" id="category">
+	{{ range . }}
+	<option value="{{.Category}}" {{.Selected}}>{{.Category}}</option>
+	{{ end }}
+	</select>
+{{ end }}

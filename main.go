@@ -1,92 +1,131 @@
 package main
 
 import (
+	"crypto/rand"
 	"database/sql"
-	"fmt"
-	"log"
+	"encoding/base64"
+	"html/template"
+	"io"
+	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
+	"w4w/handlers"
+	"w4w/store"
 
-	"log/slog"
-
-	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
-	"ward4woods.ca/application"
-	"ward4woods.ca/data"
-	"ward4woods.ca/handlers"
 )
 
-func loadDotEnv() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file.")
-	}
+const LogLevel = slog.LevelDebug
+
+func init() {
+	godotenv.Load()
+	db := ConnectToDb()
+	store.SetupProductsStore(db)
 }
 
-func createDb(logger *application.Logger) *sql.DB {
-	conString := os.Getenv("DATABASE_URL")
-	logger.Info("Connecting to database...", nil)
-	db, err := sql.Open("postgres", conString)
+func ConnectToDb() *sql.DB {
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
-		logger.Error("Could not connect to database.", err)
-		os.Exit(1)
+		panic("Error when opening connection to database")
 	}
-	logger.Info("Database connection established.", nil)
+
 	return db
 }
 
-func createSessionStore(logger *application.Logger) *sessions.CookieStore {
-	sessionKey := []byte(os.Getenv("SESSION_KEY"))
-
-	sessionStore := sessions.NewCookieStore([]byte(sessionKey))
-	logger.Info("Session store created successfully.", nil)
-	return sessionStore
+func SetupLogging() {
+	opts := &slog.HandlerOptions{Level: LogLevel}
+	var handler slog.Handler = slog.NewTextHandler(os.Stdin, opts)
+	if os.Getenv("APP_ENV ") == "production" {
+		handler = slog.NewJSONHandler(os.Stdin, opts)
+	}
+	slog.SetDefault(slog.New(handler))
 }
 
-func createProductsStore(db *sql.DB, logger *application.Logger) *data.ProductsStore {
-	return data.NewProductsStore(db, logger)
+type Template struct {
+	templates *template.Template
 }
 
-func setupStatic(router *application.Router, productsStore *data.ProductsStore, logger *application.Logger) {
-	htmlPath := "html"
-	templatePath := filepath.Join(htmlPath, "_layout.html")
-	errorPath := filepath.Join(htmlPath, "error.html")
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
 
-	logger.Info(fmt.Sprintf("New static handler created with template path: '%s' and error path: '%s'", templatePath, errorPath), nil)
-	staticHandler := handlers.NewStaticHandler(htmlPath, templatePath, errorPath, logger)
+func newSessId() string {
+	b := make([]byte, 32)
+	if _, err := rand.Reader.Read(b); err != nil {
+		return ""
+	}
+	return base64.URLEncoding.EncodeToString(b)
+}
 
-	router.AddRoute("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		faviconPath := filepath.Join(htmlPath, "favicon.ico")
-		http.ServeFile(w, r, faviconPath)
-	})
+func SessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		sessIdCookie, err := c.Cookie("session_id")
 
-	router.AddRoute("/products/{id}", func(w http.ResponseWriter, r *http.Request) {
-		staticHandler.ProductsDetails(w, r, productsStore)
-	})
+		var sessIdStr string
 
-	router.AddRoute("/", staticHandler.HandleRequests)
+		if err == http.ErrNoCookie {
+			sessIdStr := newSessId()
+			c.SetCookie(&http.Cookie{
+				Name:     "session_id",
+				Value:    sessIdStr,
+				Path:     "/",
+				HttpOnly: true,
+				Secure:   false,
+				MaxAge:   86400 * 7,
+			})
+		} else {
+			sessIdStr = sessIdCookie.Value
+		}
+
+		c.Set("session_id", sessIdStr)
+		return next(c)
+	}
 }
 
 func main() {
-	loadDotEnv()
-	port := ":8080"
-	logger := application.NewLogger(slog.Default())
+	e := echo.New()
 
-	db := createDb(logger)
-	sessionStore := createSessionStore(logger)
+	e.Use(SessionMiddleware)
 
-	productsStore := createProductsStore(db, logger)
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello world")
+	})
 
-	router := application.NewRouter()
+	t := &Template{
+		template.Must(template.ParseGlob("html/*.html")),
+	}
 
-	handlers.HandleProducts(router, productsStore, logger, sessionStore)
+	e.Renderer = t
 
-	setupStatic(router, productsStore, logger)
+	e.GET("/", func(c echo.Context) error {
+		return c.Render(http.StatusOK, "index", nil)
+	})
 
-	logger.Info(fmt.Sprintf("Application now lisening at: localhost%s", port), nil)
-	err := http.ListenAndServe(port, router.Serve())
+	e.GET("/products/:id", handlers.ProductDetails)
+	e.DELETE("/products/:id", handlers.DeleteProduct)
+	e.PUT("/products/:id", handlers.UpdateProduct)
+	e.POST("/products", handlers.NewProduct)
+	e.GET("/products", handlers.GetAllProducts)
 
-	logger.Error("Application crashed.", err)
+	e.GET("/products/categories/:id", handlers.GetCategories)
+
+	e.DELETE("/cart/:id", handlers.DeleteFromCart)
+	e.POST("/cart/:id", handlers.AddToCart)
+	e.DELETE("/cart", handlers.ClearCart)
+	e.GET("/cart", handlers.ViewCart)
+
+	e.GET("/admin/viewproducts", handlers.AdminGetProductsList)
+	e.GET("/admin", func(c echo.Context) error {
+		return c.Render(http.StatusOK, "admin", nil)
+	})
+	e.GET("/admin/newproduct", func(c echo.Context) error {
+		return c.Render(http.StatusOK, "newProduct", nil)
+	})
+	e.GET("/admin/edit/:id", handlers.EditProduct)
+
+	e.Use(middleware.Logger())
+	e.Logger.Fatal(e.Start(":8080"))
 }

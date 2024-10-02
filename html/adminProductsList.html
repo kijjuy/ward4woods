@@ -1,0 +1,15 @@
+{{ define "adminProductsList" }}
+{{ template "layout-before-content" }}
+<div>
+	<h3>List of current products</h3>
+	<div>
+	{{ range . }}
+		<div id="product-{{ .Id }}">
+		    {{ .Name }} | {{ .Price }} | {{ .Category }} | <a class="btn btn-primary" href="/admin/edit/{{ .Id }}">Edit product</a> | 
+		    <div class="btn btn-danger" hx-delete="/products/{{ .Id }}" hx-target="#product-{{ .Id }}" >Delete product</div>
+		</div>
+	{{ end }}
+	</div>
+</div>
+{{ template "layout-after-content" }}
+{{ end }}
