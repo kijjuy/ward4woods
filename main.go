@@ -12,7 +12,9 @@ import (
 	"w4w/handlers"
 	"w4w/store"
 
+	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
@@ -88,7 +90,11 @@ func SessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 func main() {
 	e := echo.New()
 
+	sessionSecret := []byte(os.Getenv("SESSION_STORE_KEY"))
+	sessionStore := sessions.NewCookieStore(sessionSecret)
+
 	e.Use(SessionMiddleware)
+	e.Use(session.Middleware(sessionStore))
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello world")

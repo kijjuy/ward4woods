@@ -1,15 +1,21 @@
 module w4w
 
-go 1.22.6
+go 1.23
+
+toolchain go1.23.2
 
 require (
+	github.com/gorilla/sessions v1.4.0
 	github.com/joho/godotenv v1.5.1
+	github.com/labstack/echo-contrib v0.17.1
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/lib/pq v1.10.9
 )
 
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/gorilla/context v1.1.2 // indirect
+	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
