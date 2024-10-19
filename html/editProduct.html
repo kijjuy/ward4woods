@@ -2,7 +2,7 @@
 	{{ template "layout-before-content" }}
 
 	<h1>Editing product: {{ .Name }}</h1>
-	<form hx-put="/products/{{.Id}}">
+	<form hx-put="/admin/products/{{.Id}}">
 		<input type="text" name="name" value="{{.Name}}">
 		<input type="number" step=".01" name="price" value="{{.Price}}">
 		<input type="text" name="description" value="{{.Description}}">

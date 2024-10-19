@@ -4,12 +4,14 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"encoding/gob"
 	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"w4w/handlers"
+	"w4w/models"
 	"w4w/store"
 
 	"github.com/gorilla/sessions"
@@ -18,14 +20,19 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
+	"golang.org/x/time/rate"
 )
 
-const LogLevel = slog.LevelDebug
+const (
+	LogLevel     = slog.LevelDebug
+	DayInSeconds = 86400
+)
 
 func init() {
 	godotenv.Load()
 	db := ConnectToDb()
 	store.SetupProductsStore(db)
+	gob.Register(new(models.Cart))
 }
 
 func ConnectToDb() *sql.DB {
@@ -62,43 +69,38 @@ func newSessId() string {
 	return base64.URLEncoding.EncodeToString(b)
 }
 
-func SessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+func CreateCartMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sessIdCookie, err := c.Cookie("session_id")
+		session, err := session.Get("session", c)
 
-		var sessIdStr string
-
-		if err == http.ErrNoCookie {
-			sessIdStr := newSessId()
-			c.SetCookie(&http.Cookie{
-				Name:     "session_id",
-				Value:    sessIdStr,
-				Path:     "/",
-				HttpOnly: true,
-				Secure:   false,
-				MaxAge:   86400 * 7,
-			})
-		} else {
-			sessIdStr = sessIdCookie.Value
+		if err != nil {
+			slog.Error("Error getting session", "Error", err)
+			return err
 		}
 
-		c.Set("session_id", sessIdStr)
+		if _, ok := session.Values["cart"].(*models.Cart); !ok {
+			slog.Info("Creating new cart")
+			session.Values["cart"] = new(models.Cart)
+
+			session.Options = &sessions.Options{
+				Path:     "/",
+				MaxAge:   DayInSeconds * 7,
+				HttpOnly: true,
+			}
+
+			err = session.Save(c.Request(), c.Response())
+			if err != nil {
+				slog.Error("Error saving session", "Error", err)
+				return err
+			}
+		}
 		return next(c)
 	}
+
 }
 
 func main() {
 	e := echo.New()
-
-	sessionSecret := []byte(os.Getenv("SESSION_STORE_KEY"))
-	sessionStore := sessions.NewCookieStore(sessionSecret)
-
-	e.Use(SessionMiddleware)
-	e.Use(session.Middleware(sessionStore))
-
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello world")
-	})
 
 	t := &Template{
 		template.Must(template.ParseGlob("html/*.html")),
@@ -106,16 +108,23 @@ func main() {
 
 	e.Renderer = t
 
+	e.Use(middleware.Logger())
+	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(rate.Limit(5))))
+
+	sessionSecret := []byte(os.Getenv("SESSION_STORE_KEY"))
+	sessionStore := sessions.NewCookieStore(sessionSecret)
+
+	e.Use(session.Middleware(sessionStore))
+	e.Use(CreateCartMiddleware)
+
+	admin := e.Group("/admin")
+
 	e.GET("/", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "index", nil)
 	})
 
 	e.GET("/products/:id", handlers.ProductDetails)
-	e.DELETE("/products/:id", handlers.DeleteProduct)
-	e.PUT("/products/:id", handlers.UpdateProduct)
-	e.POST("/products", handlers.NewProduct)
 	e.GET("/products", handlers.GetAllProducts)
-
 	e.GET("/products/categories/:id", handlers.GetCategories)
 
 	e.DELETE("/cart/:id", handlers.DeleteFromCart)
@@ -123,15 +132,31 @@ func main() {
 	e.DELETE("/cart", handlers.ClearCart)
 	e.GET("/cart", handlers.ViewCart)
 
-	e.GET("/admin/viewproducts", handlers.AdminGetProductsList)
-	e.GET("/admin", func(c echo.Context) error {
+	admin.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
+		if username == os.Getenv("ADMIN_USER") && password == os.Getenv("ADMIN_PASS") {
+			return true, nil
+		}
+		slog.Info("", "Username", os.Getenv("ADMIN_USER"))
+		slog.Info("", "Password", os.Getenv("ADMIN_PASS"))
+		slog.Info("typed:", "Username", username)
+		slog.Info("typed:", "Password", password)
+		return false, nil
+	}))
+
+	admin.GET("", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "admin", nil)
 	})
-	e.GET("/admin/newproduct", func(c echo.Context) error {
+	admin.GET("/viewproducts", handlers.AdminGetProductsList)
+	admin.GET("/newproduct", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "newProduct", nil)
 	})
-	e.GET("/admin/edit/:id", handlers.EditProduct)
+	admin.GET("/newimage", func(c echo.Context) error {
+		return c.Render(http.StatusOK, "imageUpload", nil)
+	})
+	admin.GET("/products/edit/:id", handlers.EditProduct)
+	admin.DELETE("/products/:id", handlers.DeleteProduct)
+	admin.PUT("/products/:id", handlers.UpdateProduct)
+	admin.POST("/products", handlers.NewProduct)
 
-	e.Use(middleware.Logger())
 	e.Logger.Fatal(e.Start(":8080"))
 }

@@ -5,8 +5,8 @@
 	<div>
 	{{ range . }}
 		<div id="product-{{ .Id }}">
-		    {{ .Name }} | {{ .Price }} | {{ .Category }} | <a class="btn btn-primary" href="/admin/edit/{{ .Id }}">Edit product</a> | 
-		    <div class="btn btn-danger" hx-delete="/products/{{ .Id }}" hx-target="#product-{{ .Id }}" >Delete product</div>
+		    {{ .Name }} | {{ .Price }} | {{ .Category }} | <a class="btn btn-primary" href="/admin/products/edit/{{ .Id }}">Edit product</a> | 
+		    <div class="btn btn-danger" hx-delete="admin/products/{{ .Id }}" hx-target="#product-{{ .Id }}" >Delete product</div>
 		</div>
 	{{ end }}
 	</div>

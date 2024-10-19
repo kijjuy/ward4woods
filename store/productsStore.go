@@ -45,7 +45,6 @@ func GetProductById(id int) (models.Product, error) {
 	return product, err
 }
 
-// TODO: For some reason there is a nil ptr error here when attempting to delete. Try to fix this.
 func DeleteProductById(id int) (int, error) {
 	slog.Info("Entered DeleteProductById")
 	result, err := db.Exec("DELETE FROM products WHERE product_id = $1", id)
