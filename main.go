@@ -5,11 +5,14 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/gob"
+	"fmt"
 	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"w4w/handlers"
 	"w4w/models"
 	"w4w/store"
@@ -26,6 +29,8 @@ import (
 const (
 	LogLevel     = slog.LevelDebug
 	DayInSeconds = 86400
+	layoutName   = "_layout.html"
+	templateDir  = "html"
 )
 
 func init() {
@@ -54,11 +59,47 @@ func SetupLogging() {
 }
 
 type Template struct {
-	templates *template.Template
+	layout    *template.Template
+	templates map[string]*template.Template
+}
+
+func NewTemplate(layoutPath, templatesDir string) (*Template, error) {
+	layout, err := template.ParseGlob(layoutPath)
+	if err != nil {
+		return nil, err
+	}
+
+	templates := make(map[string]*template.Template)
+
+	files, err := filepath.Glob(templatesDir + "/*.html")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		name := filepath.Base(file)
+		if name != layoutName {
+			tmpl, err := template.Must(layout.Clone()).ParseFiles(file)
+			if err != nil {
+				return nil, err
+			}
+			templates[strings.TrimSuffix(name, ".html")] = tmpl
+		}
+	}
+
+	return &Template{
+		layout:    layout,
+		templates: templates,
+	}, nil
+
 }
 
 func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
+	tmpl, ok := t.templates[name]
+	if !ok {
+		return fmt.Errorf("template %s not found.", name)
+	}
+	return tmpl.Execute(w, data)
 }
 
 func newSessId() string {
@@ -102,10 +143,10 @@ func CreateCartMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 func main() {
 	e := echo.New()
 
-	t := &Template{
-		template.Must(template.ParseGlob("html/*.html")),
+	t, err := NewTemplate("html/"+layoutName, templateDir)
+	if err != nil {
+		slog.Error("Could not find template")
 	}
-
 	e.Renderer = t
 
 	e.Use(middleware.Logger())
