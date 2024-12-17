@@ -1,5 +1,5 @@
-{{ define "newProduct" }}
-	{{ template "layout-before-content" }}
+{{ define "title" }}New Product{{ end }}
+{{ define "content" }}
 	<div>
 		<form hx-post="/admin/products">
 			<div class="mb-3">
@@ -44,7 +44,6 @@
 			}
 		}
 	</script>
-	{{ template "layout-after-content" }}
 {{ end }}
 
 <!-- TODO: Get multiple image uploads working --!>

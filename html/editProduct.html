@@ -1,5 +1,5 @@
-{{ define "editProduct" }}
-	{{ template "layout-before-content" }}
+{{ define "title" }}Edit {{ .Name }}{{ end }}
+{{ define "content" }}
 
 	<h1>Editing product: {{ .Name }}</h1>
 	<form hx-put="/admin/products/{{.Id}}">
@@ -12,7 +12,6 @@
 		<button class="btn btn-primary">Submit</submit>
 	</form>
 	
-	{{ template "layout-after-content" }}
 {{ end }}
 
 {{ define "categorySelect" }}

@@ -1,5 +1,5 @@
-{{ define "cart" }}
-	{{ template "layout-before-content" }}
+{{ define "title" }}Cart{{ end }}
+{{ define "content" }}
 	<h1>Cart Items</h1>
 	<h5 hx-delete="/cart" hx-target="#cart-container">Clear cart</h5>
 	<div id="cart-container">
@@ -9,6 +9,5 @@
 		</div>
 		{{ end }}
 	</div>
-	{{ template "layout-after-content" }}
 {{ end }}
 
