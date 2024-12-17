@@ -90,7 +90,14 @@ func NewTemplate(layoutPath, templatesDir string) (*Template, error) {
 			if err != nil {
 				return nil, err
 			}
+
+			for _, template := range tmpl.Templates() {
+				if template.Name() != "content" && template.Name() != "title" {
+					templates[template.Name()] = template
+				}
+			}
 			templates[strings.TrimSuffix(name, ".html")] = tmpl
+
 		}
 	}
 
@@ -106,7 +113,13 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 	if !ok {
 		return fmt.Errorf("template %s not found.", name)
 	}
-	return tmpl.Execute(w, data)
+
+	if c.Request().Header.Get("Hx-Request") == "true" {
+		return tmpl.ExecuteTemplate(w, name, data)
+	} else {
+
+		return tmpl.Execute(w, data)
+	}
 }
 
 func newSessId() string {
@@ -150,9 +163,12 @@ func CreateCartMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 func main() {
 	e := echo.New()
 
-	t, err := NewTemplate("html/"+layoutName, templateDir)
+	templateName := "html/" + layoutName
+	slog.Info("layout Name:", "LayoutName", templateName)
+	t, err := NewTemplate(templateName, templateDir)
 	if err != nil {
 		slog.Error("Could not find template")
+		panic("Error setting up templates.")
 	}
 	e.Renderer = t
 
