@@ -46,6 +46,13 @@ func ConnectToDb() *sql.DB {
 		panic("Error when opening connection to database")
 	}
 
+	err = db.Ping()
+
+	if err != nil {
+		slog.Error("Error Pinging database.", "Error", err)
+		panic("Error pinging database. Shutting down now.")
+	}
+
 	return db
 }
 
