@@ -1,0 +1,25 @@
+{{ define "title" }}Products{{ end }}
+{{ define "content" }}
+		<div class="container">
+			<div class="row justify-content-center">
+			{{ range . }}
+				{{ template "productCard" . }}
+			{{end}}
+			</div>
+		</div>
+{{ end }}
+
+{{ define "productCard" }}
+<div class="card product-card">
+	<a href="/products/{{ .Id }}" class="product-link">
+		<img src="" class="card-img-top" alt="">
+		<div class="card-body">
+			<h5 class="card-title">{{ .Name }}</h5>
+			<p class="card-text">
+				Price : {{ .Price }} <br>
+				Category: {{ .Category }}
+			</p>
+		</div>
+	</a>
+</div>
+{{ end }}
