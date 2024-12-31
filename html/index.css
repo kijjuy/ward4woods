@@ -1,0 +1,9 @@
+.product-card {
+	width: 28rem;
+	margin: 2rem;
+}
+
+.product-link {
+	text-decoration: none;
+	color: black;
+}
