@@ -27,10 +27,14 @@ import (
 )
 
 const (
-	LogLevel     = slog.LevelDebug
-	DayInSeconds = 86400
-	layoutName   = "_layout.html"
-	templateDir  = "html"
+	LogLevel         = slog.LevelDebug
+	DayInSeconds     = 86400
+	layoutName       = "_layout.html"
+	templateDir      = "html"
+	bootstrapCssPath = "html/bootstrap/css/bootstrap.css"
+	bootstrapJsPath  = "html/bootstrap/js/bootstrap.js"
+	jqueryPath       = "html/jquery.js"
+	indexCssPath     = "html/index.css"
 )
 
 func init() {
@@ -164,7 +168,6 @@ func main() {
 	e := echo.New()
 
 	templateName := "html/" + layoutName
-	slog.Info("layout Name:", "LayoutName", templateName)
 	t, err := NewTemplate(templateName, templateDir)
 	if err != nil {
 		slog.Error("Could not find template")
@@ -182,6 +185,11 @@ func main() {
 	e.Use(CreateCartMiddleware)
 
 	admin := e.Group("/admin")
+
+	e.File("/bootstrap/css/bootstrap.css", bootstrapCssPath)
+	e.File("/bootstrap/js/bootstrap.js", bootstrapJsPath)
+	e.File("/jquery.js", jqueryPath)
+	e.File("/index.css", indexCssPath)
 
 	e.GET("/", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "index", nil)
