@@ -1,9 +1,13 @@
 package models
 
+import (
+	"github.com/shopspring/decimal"
+)
+
 type Product struct {
 	Id          int
 	Name        string
-	Price       int
+	Price       decimal.Decimal
 	Description string
 	Category    string
 }
