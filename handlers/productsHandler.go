@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"w4w/models"
 	"w4w/services"
 
 	"github.com/labstack/echo/v4"
+	"github.com/shopspring/decimal"
 )
 
 func GetAllProducts(c echo.Context) error {
@@ -164,12 +164,9 @@ func GetCategories(c echo.Context) error {
 
 func getProductFromForm(c echo.Context) (models.Product, error) {
 	name := c.FormValue("name")
-	priceStr := c.FormValue("price")
+	price, err := decimal.NewFromString(c.FormValue("price"))
 	description := c.FormValue("description")
 	category := c.FormValue("category")
-
-	priceStr = strings.Replace(priceStr, ".", "", 1)
-	price, err := strconv.Atoi(priceStr)
 
 	if err != nil {
 		return models.NewProduct(), err
