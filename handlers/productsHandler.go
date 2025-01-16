@@ -41,7 +41,6 @@ func ProductDetails(c echo.Context) error {
 	return c.Render(http.StatusOK, "productDetails", product)
 }
 
-// TODO: Authorize endpoint
 func DeleteProduct(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -102,7 +101,6 @@ func EditProduct(c echo.Context) error {
 	return c.Render(http.StatusOK, "editProduct", product)
 }
 
-// TODO: authorize endpoint
 func UpdateProduct(c echo.Context) error {
 	productIdStr := c.Param("id")
 	productId, err := strconv.Atoi(productIdStr)

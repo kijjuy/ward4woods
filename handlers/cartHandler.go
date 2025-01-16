@@ -12,7 +12,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// TODO: Encountering error when converting session value of cart to models.Cart
 func AddToCart(c echo.Context) error {
 	idStr := c.Param("id")
 	productId, err := strconv.Atoi(idStr)
