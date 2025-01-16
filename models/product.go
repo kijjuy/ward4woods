@@ -32,3 +32,8 @@ type CartDisplayProducts []CartDisplayProduct
 func NewCartDisplayProducts() CartDisplayProducts {
 	return make([]CartDisplayProduct, 0)
 }
+
+type ProductListDisplayModel struct {
+	Product          Product
+	ProductMainImage string
+}
