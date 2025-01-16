@@ -2,12 +2,17 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"strconv"
 	"w4w/models"
 	"w4w/services"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/shopspring/decimal"
 )
@@ -20,7 +25,23 @@ func GetAllProducts(c echo.Context) error {
 		return err
 	}
 
-	return c.Render(http.StatusOK, "productsList", products)
+	displayProducts := make([]models.ProductListDisplayModel, 0)
+
+	for _, product := range products {
+		imageId, err := services.GetMainProductImage(product.Id)
+		if err != nil {
+			imageId = "no-image.png"
+			slog.Warn("Cound not get image for product.", "ProductId", product.Id, "Error", err)
+		}
+		displayProduct := models.ProductListDisplayModel{
+			Product:          product,
+			ProductMainImage: imageId,
+		}
+		displayProducts = append(displayProducts, displayProduct)
+
+	}
+
+	return c.Render(http.StatusOK, "productsList", displayProducts)
 }
 
 func ProductDetails(c echo.Context) error {
