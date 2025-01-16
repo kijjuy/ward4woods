@@ -1,7 +1,7 @@
 {{ define "title" }}New Product{{ end }}
 {{ define "content" }}
 	<div>
-		<form hx-post="/admin/products">
+		<form hx-post="/admin/products" enctype="multipart/form-data">
 			<div class="mb-3">
 				<label>Product Name</label>
 				<input class="form-control" type="text" name="name">
