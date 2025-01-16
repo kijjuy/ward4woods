@@ -223,7 +223,7 @@ func main() {
 	admin.GET("/newproduct", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "newProduct", nil)
 	})
-	admin.GET("/newimage", func(c echo.Context) error {
+	admin.GET("/newImage", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "imageUpload", nil)
 	})
 	admin.GET("/products/edit/:id", handlers.EditProduct)
