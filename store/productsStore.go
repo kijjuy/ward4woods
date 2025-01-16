@@ -2,8 +2,11 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"w4w/models"
+
+	"github.com/google/uuid"
 )
 
 var db *sql.DB
@@ -65,10 +68,14 @@ func DeleteProductById(id int) (int, error) {
 	return int(rowsAffected), err
 }
 
-func CreateProduct(product models.Product) error {
-	_, err := db.Exec("INSERT INTO products (name, price, description, category) VALUES($1, $2, $3, $4)", product.Name, product.Price, product.Description, product.Category)
+func CreateProduct(product models.Product) (int, error) {
+	row := db.QueryRow("INSERT INTO products (name, price, description, category) VALUES($1, $2, $3, $4) RETURNING product_id", product.Name, product.Price, product.Description, product.Category)
 
-	return err
+	var productId int
+
+	err := row.Scan(&productId)
+
+	return productId, err
 }
 
 func UpdateProduct(id int, product models.Product) (int, error) {
@@ -105,4 +112,21 @@ func GetCategories() ([]string, error) {
 	}
 
 	return categories, err
+}
+
+func CreateProductImage(productId int, imageId uuid.UUID) error {
+	fmt.Printf("productId: %d, imageId: %s\n", productId, imageId.String())
+	_, err := db.Exec("INSERT INTO product_images (id, product_id) VALUES($1, (SELECT product_id FROM products WHERE product_id = $2))", imageId, productId)
+	return err
+}
+
+func GetMainProductImage(productId int) (string, error) {
+	row := db.QueryRow("SELECT id from product_images WHERE product_id = $1 AND is_main = 'true'", productId)
+
+	var imageId string
+
+	err := row.Scan(&imageId)
+
+	return imageId, err
+
 }
