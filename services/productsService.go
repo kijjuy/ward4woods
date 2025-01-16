@@ -3,6 +3,8 @@ package services
 import (
 	"w4w/models"
 	"w4w/store"
+
+	"github.com/google/uuid"
 )
 
 type ErrNoRowsAffected struct{}
@@ -33,7 +35,7 @@ func DeleteProduct(id int) error {
 	return err
 }
 
-func CreateProduct(product models.Product) error {
+func CreateProduct(product models.Product) (int, error) {
 	return store.CreateProduct(product)
 }
 
@@ -78,4 +80,12 @@ func GetCategories(currentCategory string) (models.Categories, error) {
 	}
 
 	return categories, err
+}
+
+func CreateNewProductImageDB(productId int, imageId uuid.UUID) error {
+	return store.CreateProductImage(productId, imageId)
+}
+
+func GetMainProductImage(productId int) (string, error) {
+	return store.GetMainProductImage(productId)
 }
