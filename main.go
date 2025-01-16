@@ -190,6 +190,7 @@ func main() {
 	e.File("/bootstrap/js/bootstrap.js", bootstrapJsPath)
 	e.File("/jquery.js", jqueryPath)
 	e.File("/index.css", indexCssPath)
+	e.Static("/images/", "uploads")
 
 	e.GET("/", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "index", nil)

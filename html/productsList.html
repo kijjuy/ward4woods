@@ -11,13 +11,13 @@
 
 {{ define "productCard" }}
 <div class="card product-card">
-	<a href="/products/{{ .Id }}" class="product-link">
-		<img src="" class="card-img-top" alt="">
+	<a href="/products/{{ .Product.Id }}" class="product-link">
+		<img src="/images/{{ .ProductMainImage }}" class="card-img-top" alt="">
 		<div class="card-body">
-			<h5 class="card-title">{{ .Name }}</h5>
+			<h5 class="card-title">{{ .Product.Name }}</h5>
 			<p class="card-text">
-				Price : {{ .Price }} <br>
-				Category: {{ .Category }}
+				Price : {{ .Product.Price }} <br>
+				Category: {{ .Product.Category }}
 			</p>
 		</div>
 	</a>
