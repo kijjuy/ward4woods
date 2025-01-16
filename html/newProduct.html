@@ -22,43 +22,60 @@
 					<option value="Chopping Block">Chopping Block</option>
 				</select>
 			</div>
+			<div id="uploadContainer">
 			{{ template "imageUpload" }}
+			</div>
 			<button class="btn">Submit</button>
 		</form>
 	</div>
 	<script>
-		function displaySelectedImage(event, elementId) {
-			const selectedImage = document.getElementById(elementId);
-			const fileInput = event.target;
-			
-			console.log(event);
-			
-			if(fileInput.files && fileInput.files[0]) {
-				const reader = new FileReader();
-				
-				reader.onload = function(e) {
-					selectedImage.src = e.target.result;
-				}
 
-				reader.readAsDataURL(fileInput.files[0]);
+		function clearImages() {
+			imageContainer = document.getElementById("imageContainer");
+			for(let i = 0; i < imageContainer.children.length; i++) {
+				imageContainer.children[i].remove();
+			}
+		}
+
+		function createImageDisplay(image) {
+			let newImage = document.createElement("img");
+
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				newImage.src = e.target.result;
+			}
+			reader.readAsDataURL(image);
+			newImage.classList.add("preview-image");
+			return newImage;
+		}
+
+		async function displaySelectedImage(event) {
+			clearImages();
+
+			const fileInput = event.target;
+
+			if(fileInput.files) {
+				for(let i = 0; i < fileInput.files.length; i++){
+					let imageElement = createImageDisplay(fileInput.files[i]);
+					document.getElementById("imageContainer").appendChild(imageElement);
+				}
 			}
 		}
 	</script>
 {{ end }}
 
-<!-- TODO: Get multiple image uploads working --!>
 {{ define "imageUpload" }}
 	<div>
-		<div class="mb-4 d-flex justify-content-center">
-			<img src="https://mdbootstrap.com/img/Photos/Others/placeholder.jpg" alt="placeholder image" id="selectedImage"
-			style="width:300px;" hx-trigger="changed" hx-get="/admin/newimage" hx-target="next"/>
+		<div id="imageContainer" class="mb-4 d-flex justify-content-center">
+			<img src="https://mdbootstrap.com/img/Photos/Others/placeholder.jpg" alt="placeholder image" id="placeholderImage"
+			style="width:300px;"/>
 		</div>
 		<div class="d-flex justify-content-center">
 			<div class="btn btn-primary btn-rounded">
 				<label class="form-label text-white m-1" for="imageUpload">Choose file</label>
-				<input class="form-control d-none" type="file" id="imageUpload" onchange="displaySelectedImage(event, 'selectedImage')" accept=".jpp,.jpeg,.png">
+				<input class="form-control d-none" name="imageUploads[]" type="file" id="imageUpload" onchange="displaySelectedImage(event)" accept=".jpp,.jpeg,.png"
+				multiple="multiple">
 			</div>
 		</div>
 	</div>
-	<div id="next"></div>
 {{ end }}
