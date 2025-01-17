@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"strconv"
@@ -86,17 +84,60 @@ func DeleteProduct(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-// TODO: authorize endpoint
 func NewProduct(c echo.Context) error {
 	product, err := getProductFromForm(c)
 
 	if err != nil {
+		slog.Error("Error getting count of images", "Error", err)
 		return err
 	}
 
-	err = services.CreateProduct(product)
+	form, err := c.MultipartForm()
+	if err != nil {
+		return err
+	}
+
+	files := form.File["imageUploads[]"]
+
+	for _, image := range files {
+		src, err := image.Open()
+		if err != nil {
+			return err
+		}
+
+		defer src.Close()
+
+		filename := uuid.New()
+
+		dst, err := os.Create("uploads/" + filename.String())
+
+		if err != nil {
+			slog.Error("Error creating file for images.", "Error", err)
+			return err
+		}
+		defer dst.Close()
+
+		if _, err = io.Copy(dst, src); err != nil {
+			slog.Error("Error copying image to new file")
+			return err
+		}
+
+		newProductId, err := services.CreateProduct(product)
+
+		if err != nil {
+			return err
+		}
+
+		err = services.CreateNewProductImageDB(newProductId, filename)
+
+		if err != nil {
+			return err
+		}
+
+	}
 
 	if err != nil {
+		slog.Error("Error getting values from form submission.", "Error", err)
 		return err
 	}
 
@@ -183,7 +224,8 @@ func GetCategories(c echo.Context) error {
 
 func getProductFromForm(c echo.Context) (models.Product, error) {
 	name := c.FormValue("name")
-	price, err := decimal.NewFromString(c.FormValue("price"))
+	priceStr := c.FormValue("price")
+	price, err := decimal.NewFromString(priceStr)
 	description := c.FormValue("description")
 	category := c.FormValue("category")
 
