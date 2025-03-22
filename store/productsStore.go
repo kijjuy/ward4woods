@@ -130,3 +130,27 @@ func GetMainProductImage(productId int) (string, error) {
 	return imageId, err
 
 }
+
+func GetImagesByProductId(id int) ([]string, error) {
+	rows, err := db.Query("SELECT id FROM product_images WHERE product_id = $1", id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	imageIds := make([]string, 0)
+
+	for rows.Next() {
+		var imageId string
+
+		err = rows.Scan(&imageId)
+
+		if err != nil {
+			return nil, err
+		}
+
+		imageIds = append(imageIds, imageId)
+	}
+
+	return imageIds, err
+}
