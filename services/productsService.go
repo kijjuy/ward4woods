@@ -82,8 +82,8 @@ func GetCategories(currentCategory string) (models.Categories, error) {
 	return categories, err
 }
 
-func CreateNewProductImageDB(productId int, imageId uuid.UUID) error {
-	return store.CreateProductImage(productId, imageId)
+func CreateNewProductImageDB(productId int, imageId uuid.UUID, isMain bool) error {
+	return store.CreateProductImage(productId, imageId, isMain)
 }
 
 func GetMainProductImage(productId int) (string, error) {
