@@ -89,3 +89,7 @@ func CreateNewProductImageDB(productId int, imageId uuid.UUID, isMain bool) erro
 func GetMainProductImage(productId int) (string, error) {
 	return store.GetMainProductImage(productId)
 }
+
+func GetImagesByProductId(id int) ([]string, error) {
+	return store.GetImagesByProductId(id)
+}
