@@ -39,6 +39,7 @@ const (
 
 func init() {
 	godotenv.Load()
+	SetupLogging()
 	db := ConnectToDb()
 	store.SetupProductsStore(db)
 	gob.Register(new(models.Cart))
