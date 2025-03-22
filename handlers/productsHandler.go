@@ -53,11 +53,26 @@ func ProductDetails(c echo.Context) error {
 	product, err := services.GetProductById(id)
 
 	if err != nil {
-		slog.Error("Error getting products from database", "Error", err)
+		slog.Error("Error getting product from database", "Error", err)
 		return err
 	}
 
-	return c.Render(http.StatusOK, "productDetails", product)
+	images, err := services.GetImagesByProductId(id)
+
+	if err != nil {
+		slog.Error("Error getting images from database", "Error", err)
+		return err
+	}
+
+	productDisplayModel := models.ProductDetailsDisplayModel{
+		Product:     product,
+		MainImage:   images[0],
+		OtherImages: images[1:],
+	}
+
+	slog.Debug("Product is...", "Product", productDisplayModel)
+
+	return c.Render(http.StatusOK, "productDetails", productDisplayModel)
 }
 
 func DeleteProduct(c echo.Context) error {
