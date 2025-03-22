@@ -114,7 +114,13 @@ func NewProduct(c echo.Context) error {
 
 	files := form.File["imageUploads[]"]
 
-	for _, image := range files {
+	newProductId, err := services.CreateProduct(product)
+
+	if err != nil {
+		return err
+	}
+
+	for i, image := range files {
 		src, err := image.Open()
 		if err != nil {
 			return err
@@ -137,13 +143,9 @@ func NewProduct(c echo.Context) error {
 			return err
 		}
 
-		newProductId, err := services.CreateProduct(product)
+		isMain := i == 0
 
-		if err != nil {
-			return err
-		}
-
-		err = services.CreateNewProductImageDB(newProductId, filename)
+		err = services.CreateNewProductImageDB(newProductId, filename, isMain)
 
 		if err != nil {
 			return err
