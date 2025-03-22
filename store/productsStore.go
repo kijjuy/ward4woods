@@ -114,9 +114,9 @@ func GetCategories() ([]string, error) {
 	return categories, err
 }
 
-func CreateProductImage(productId int, imageId uuid.UUID) error {
+func CreateProductImage(productId int, imageId uuid.UUID, isMain bool) error {
 	fmt.Printf("productId: %d, imageId: %s\n", productId, imageId.String())
-	_, err := db.Exec("INSERT INTO product_images (id, product_id) VALUES($1, (SELECT product_id FROM products WHERE product_id = $2))", imageId, productId)
+	_, err := db.Exec("INSERT INTO product_images (id, product_id, is_main) VALUES($1, (SELECT product_id FROM products WHERE product_id = $2), $3)", imageId, productId, isMain)
 	return err
 }
 
