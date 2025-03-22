@@ -37,3 +37,9 @@ type ProductListDisplayModel struct {
 	Product          Product
 	ProductMainImage string
 }
+
+type ProductDetailsDisplayModel struct {
+	Product     Product
+	MainImage   string
+	OtherImages []string
+}
