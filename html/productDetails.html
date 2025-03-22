@@ -1,16 +1,41 @@
-{{ define "title" }}{{ .Name }}{{ end }}
+{{ define "title" }}{{ .Product.Name }}{{ end }}
 {{ define "content" }}
 <div>
-	<h1>Name: {{ .Name }}</h1>
-	<h3>${{ .Price }}</h3>
-	<h5>{{ .Category }}</h5>
+	<div id="productImagesCarousel" class="carousel slide">
+	  <div class="carousel-inner">
+	      <div class="carousel-item active">
+		      <img src="/images/{{ .MainImage }}" class="d-block w-100" alt="...">
+    	      </div>
+		  {{ range .OtherImages }}
+		  	{{ template "carouselItem" . }}
+		  {{ end }}
+	  </div>
+	  <button class="carousel-control-prev" type="button" data-bs-target="#productImagesCarousel" data-bs-slide="prev">
+	    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+	    <span class="visually-hidden">Previous</span>
+	  </button>
+	  <button class="carousel-control-next" type="button" data-bs-target="#productImagesCarousel" data-bs-slide="next">
+	    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+	    <span class="visually-hidden">Next</span>
+	  </button>
+	</div>
+	<h1>Name: {{ .Product.Name }}</h1>
+	<h3>${{ .Product.Price }}</h3>
+	<h5>{{ .Product.Category }}</h5>
 
-	<p>{{ .Description }}</p>
-	<div hx-post="/cart/{{.Id}}">Add to cart</div>
+	<p>{{ .Product.Description }}</p>
+	<div hx-post="/cart/{{.Product.Id}}">Add to cart</div>
 
+</div>
+{{ end }}
+
+{{ define "carouselItem" }}
+<div class="carousel-item">
+	<img src="/images/{{ . }}" class="d-block w-100">
 </div>
 {{ end }}
 
 {{ define "cartAddSuccess" }}Added to cart!{{ end }}
 
 {{ define "cartDupeItem" }}Item already in cart!{{ end }}
+
